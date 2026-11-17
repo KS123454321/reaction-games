@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天降接元寶 - 反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container { text-align: center; max-width: 450px; margin: 0 auto; position: relative; }
+        .play-area { width: 100%; height: 380px; background: #FFFFFF; border-radius: 20px; position: relative; overflow: hidden; margin: 15px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.08); touch-action: none; }
+        .basket { width: 70px; height: 50px; position: absolute; bottom: 10px; left: 190px; font-size: 3rem; display: flex; align-items: center; justify-content: center; }
+        .item { position: absolute; font-size: 2.2rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <div class="score-display">金幣：<span id="score">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <h2>🧧 天降接元寶</h2>
+        <p id="msg">左右滑動接元寶，小心不要接到鞭炮！</p>
+        
+        <div id="config-box" style="margin: 10px 0;">
+            <button class="btn-big" onclick="startGame()">開始遊戲 ▶</button>
+        </div>
+
+        <div class="play-area" id="play-area" onmousemove="moveBasket(event)" ontouchmove="moveBasketTouch(event)">
+            <div class="basket" id="basket">🧺</div>
+        </div>
+        
+        <div style="font-size: 1.2rem; font-weight: bold;">剩餘時間：<span id="time">25</span> 秒</div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let score = 0, timeLeft = 25, isStarted = false, gameTimer = null, dropTimer = null;
+        let basketX = 190;
+        const items = [];
+
+        function startGame() {
+            score = 0; timeLeft = 25; isStarted = true;
+            document.getElementById('score').innerText = score;
+            document.getElementById('config-box').style.display = 'none';
+            document.getElementById('msg').innerText = '左右滑動接住元寶！';
+            
+            // 清除舊掉落物
+            document.querySelectorAll('.item').forEach(el => el.remove());
+            items.length = 0;
+
+            // 確保籃子重置在中間
+            const area = document.getElementById('play-area');
+            basketX = (area.clientWidth - 70) / 2;
+            document.getElementById('basket').style.left = basketX + 'px';
+
+            if (gameTimer) clearInterval(gameTimer);
+            if (dropTimer) clearInterval(dropTimer);
+
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time').innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+                updateItems();
+            }, 30);
+
+            dropTimer = setInterval(spawnItem, 650);
+        }
+
+        function moveBasket(e) {
+            if (!isStarted) return;
+            const area = document.getElementById('play-area');
+            const rect = area.getBoundingClientRect();
+            basketX = e.clientX - rect.left - 35;
+            basketX = Math.max(0, Math.min(area.clientWidth - 70, basketX));
+            document.getElementById('basket').style.left = basketX + 'px';
+        }
+
+        function moveBasketTouch(e) {
+            if (!isStarted) return;
+            const area = document.getElementById('play-area');
+            const rect = area.getBoundingClientRect();
+            basketX = e.touches[0].clientX - rect.left - 35;
+            basketX = Math.max(0, Math.min(area.clientWidth - 70, basketX));
+            document.getElementById('basket').style.left = basketX + 'px';
+        }
+
+        function spawnItem() {
+            if (!isStarted) return;
+            const area = document.getElementById('play-area');
+            const isBomb = Math.random() < 0.25;
+            const elem = document.createElement('div');
+            elem.className = 'item';
+            elem.innerText = isBomb ? '🧨' : '🪙';
+            
+            const maxX = area.clientWidth - 40;
+            const x = Math.random() * Math.max(10, maxX);
+            elem.style.left = x + 'px';
+            elem.style.top = '0px';
+            area.appendChild(elem);
+            
+            items.push({ el: elem, x: x, y: 0, isBomb: isBomb });
+        }
+
+        function updateItems() {
+            const area = document.getElementById('play-area');
+            const areaHeight = area.clientHeight;
+            
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.y += 4; // 下落速度調適平緩
+                item.el.style.top = item.y + 'px';
+                
+                // 判斷是否掉落到籃子的高度區間 (距離底部大約 40px ~ 90px 之間)
+                const itemBottom = item.y + 40;
+                const catchLine = areaHeight - 85; 
+
+                if (itemBottom >= catchLine && item.y <= areaHeight - 30) {
+                    // 檢查水平範圍是否有對準籃子（容許左右各 15px 誤差）
+                    if (item.x + 20 >= basketX - 10 && item.x + 20 <= basketX + 80) {
+                        if (item.isBomb) {
+                            score = Math.max(0, score - 5);
+                            playSound('bad');
+                        } else {
+                            score += 1;
+                            playSound('good');
+                        }
+                        document.getElementById('score').innerText = score;
+                        item.el.remove();
+                        items.splice(i, 1);
+                        continue;
+                    }
+                }
+                
+                // 掉出畫面底部移除
+                if (item.y > areaHeight - 20) {
+                    item.el.remove();
+                    items.splice(i, 1);
+                }
+            }
+        }
+
+        function endGame() {
+            isStarted = false;
+            clearInterval(gameTimer);
+            clearInterval(dropTimer);
+            document.querySelectorAll('.item').forEach(el => el.remove());
+            items.length = 0;
+            
+            let isNewBest = saveHighScore('gold', score);
+            document.getElementById('msg').innerHTML = `時間到！總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('config-box').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

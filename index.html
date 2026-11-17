@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全齡益智與反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        header {
+            text-align: center;
+            margin: 10px 0 20px 0;
+        }
+        h1 {
+            font-size: 2.4rem;
+            color: #D35400;
+            margin: 0 0 8px 0;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #555;
+            margin: 0;
+        }
+        /* 分類篩選按鈕列 */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .filter-btn {
+            background: white;
+            border: 3px solid #E0E0E0;
+            padding: 10px 22px;
+            font-size: 1.15rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        /* 遊戲卡片網格 */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 22px;
+            width: 100%;
+            max-width: 1100px;
+        }
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 26px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+            border: 4px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+        .game-card:hover, .game-card:active {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+        .tag-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #FFF3CD;
+            color: #856404;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        .icon {
+            font-size: 4.5rem;
+            margin: 10px 0;
+        }
+        .game-title {
+            font-size: 1.75rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .game-desc {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+        .score-badge {
+            background: #EBF5FB;
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--info);
+            margin-bottom: 16px;
+        }
+        .play-btn {
+            background: var(--success);
+            color: white;
+            font-size: 1.35rem;
+            font-weight: bold;
+            padding: 12px 30px;
+            border-radius: 50px;
+            width: 85%;
+            box-shadow: 0 4px 0 #1E8449;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎪 全齡益智與反應遊樂園</h1>
+        <p class="subtitle">點選下方大卡片，隨時隨地動動腦、練反應！</p>
+    </header>
+
+    <!-- 分類按鈕（未來新增數學、中文遊戲時自動分類） -->
+    <div class="filter-bar" id="filter-bar">
+        <button class="filter-btn active" onclick="filterGames('all', this)">🌟 全部遊戲</button>
+        <button class="filter-btn" onclick="filterGames('reaction', this)">⚡ 反應力訓練</button>
+        <button class="filter-btn" onclick="filterGames('brain', this)">🧠 數學與語文</button>
+    </div>
+
+    <!-- 遊戲卡片自動生成區 -->
+    <main class="game-grid" id="game-grid"></main>
+
+    <script>
+        // ==========================================
+        // 【遊戲擴充設定區】未來只要在這裡新增物件即可！
+        // ==========================================
+        const GAMES_CONFIG = [
+            {
+                id: 'mole',                 // 對應 localStorage 的 best_mole
+                title: '夜市打地鼠',
+                icon: '🐹',
+                category: 'reaction',       // reaction (反應) 或 brain (數學/語文)
+                tag: '手眼協調',
+                desc: '看到地鼠就快點！小心不要打到戴安全帽的地鼠喔！',
+                url: 'whack-a-mole.html'
+            },
+            {
+                id: 'color',
+                title: '顏色大亂鬥',
+                icon: '🎨',
+                category: 'reaction',
+                tag: '專注防呆',
+                desc: '考驗眼力與腦力！選出文字實際「顯示的顏色」。',
+                url: 'stroop-color.html'
+            },
+            {
+                id: 'light',
+                title: '123 木頭人',
+                icon: '🚦',
+                category: 'reaction',
+                tag: '瞬間煞車',
+                desc: '綠燈按住往前衝，紅燈亮起趕快放開手指！',
+                url: 'red-light.html'
+            },
+            {
+                id: 'diff',
+                title: '閃電找不同',
+                icon: '🔍',
+                category: 'reaction',
+                tag: '視覺搜尋',
+                desc: '在一群圖案中，用最快速度點出唯一不一樣的那張牌！',
+                url: 'spot-diff.html'
+            },
+            {
+                id: 'gold',
+                title: '天降接元寶',
+                icon: '🧧',
+                category: 'reaction',
+                tag: '左右預判',
+                desc: '左右移動聚寶盆接住金元寶，小心躲開鞭炮！',
+                url: 'catch-gold.html'
+            }
+            
+            // 👇 未來要加入你原本的數學或中文遊戲時，把下面這兩段取消註解並修改檔名即可！
+            /*
+            ,{
+                id: 'math',
+                title: '趣味算術挑戰',
+                icon: '🔢',
+                category: 'brain',
+                tag: '算術腦力',
+                desc: '挑戰加減乘除心算速度，越算越靈活！',
+                url: 'math-game.html'
+            },
+            {
+                id: 'chinese',
+                title: '中文文字大挑戰',
+                icon: '🀄',
+                category: 'brain',
+                tag: '語文聯想',
+                desc: '認識國字與成語趣味問答，全家一起動動腦！',
+                url: 'chinese-game.html'
+            }
+            */
+        ];
+
+        // 自動渲染卡片的函式
+        function renderGames(filterCategory = 'all') {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = '';
+
+            const filtered = filterCategory === 'all' 
+                ? GAMES_CONFIG 
+                : GAMES_CONFIG.filter(g => g.category === filterCategory);
+
+            filtered.forEach(game => {
+                const bestScore = localStorage.getItem(`best_${game.id}`) || 0;
+                const card = document.createElement('a');
+                card.href = game.url;
+                card.className = 'game-card';
+                card.innerHTML = `
+                    <span class="tag-badge">${game.tag}</span>
+                    <div class="icon">${game.icon}</div>
+                    <div class="game-title">${game.title}</div>
+                    <div class="game-desc">${game.desc}</div>
+                    <div class="score-badge">🏆 最高紀錄：${bestScore} 分</div>
+                    <div class="play-btn">開始遊玩 ▶</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 切換分類按鈕
+        function filterGames(category, btnElement) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            renderGames(category);
+        }
+
+        // 網頁載入時執行一次
+        renderGames('all');
+    </script>
+</body>
+</html>

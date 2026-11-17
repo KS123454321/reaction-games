@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>夜市打地鼠 - 反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container { text-align: center; max-width: 500px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .hole {
+            background: #D7CCC8; border-radius: 20px; height: 110px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3.5rem; cursor: pointer; position: relative; overflow: hidden;
+            box-shadow: inset 0 8px 0 rgba(0,0,0,0.1);
+        }
+        .hole.active { background: #A1887F; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <h2>🐹 夜市打地鼠</h2>
+        <p id="msg">點擊地鼠得分！小心戴安全帽的警察（扣分）！</p>
+        <div style="margin-bottom: 15px;" id="config-box">
+            <button class="btn-big" style="font-size: 1.1rem; padding: 10px 20px;" onclick="startGame()">開始遊戲 ▶</button>
+        </div>
+        <div class="grid" id="mole-grid">
+            <div class="hole" onclick="hit(0)"></div>
+            <div class="hole" onclick="hit(1)"></div>
+            <div class="hole" onclick="hit(2)"></div>
+            <div class="hole" onclick="hit(3)"></div>
+            <div class="hole" onclick="hit(4)"></div>
+            <div class="hole" onclick="hit(5)"></div>
+            <div class="hole" onclick="hit(6)"></div>
+            <div class="hole" onclick="hit(7)"></div>
+            <div class="hole" onclick="hit(8)"></div>
+        </div>
+        <div style="font-size: 1.2rem; font-weight: bold; color: #E74C3C;">剩餘時間：<span id="time">30</span> 秒</div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let score = 0, timeLeft = 30, timer = null, moleTimer = null, isStarted = false, currentActive = -1, isPolice = false;
+        const holes = document.querySelectorAll('.hole');
+
+        function startGame() {
+            score = 0; timeLeft = 30; isStarted = true;
+            document.getElementById('score').innerText = score;
+            document.getElementById('config-box').style.display = 'none';
+            document.getElementById('msg').innerText = '遊戲進行中！';
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time').innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+            showMole();
+        }
+
+        function showMole() {
+            if (!isStarted) return;
+            holes.forEach(h => { h.innerText = ''; h.classList.remove('active'); });
+            
+            currentActive = Math.floor(Math.random() * 9);
+            isPolice = Math.random() < 0.25; // 25% 機率出現警察
+            
+            holes[currentActive].innerText = isPolice ? '👮‍♂️' : '🐹';
+            holes[currentActive].classList.add('active');
+            
+            let speed = 900;
+            moleTimer = setTimeout(showMole, speed);
+        }
+
+        function hit(index) {
+            if (!isStarted) return;
+            if (index === currentActive) {
+                if (isPolice) {
+                    score = Math.max(0, score - 3);
+                    playSound('bad');
+                    document.getElementById('msg').innerText = '哎呀！打到警察了 (-3分)';
+                } else {
+                    score += 1;
+                    playSound('good');
+                    document.getElementById('msg').innerText = '打中地鼠！(+1分)';
+                }
+                document.getElementById('score').innerText = score;
+                holes[index].innerText = '';
+                currentActive = -1;
+            }
+        }
+
+        function endGame() {
+            isStarted = false;
+            clearInterval(timer);
+            clearTimeout(moleTimer);
+            holes.forEach(h => { h.innerText = ''; h.classList.remove('active'); });
+            
+            let isNewBest = saveHighScore('mole', score);
+            document.getElementById('msg').innerHTML = `時間到！總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('config-box').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

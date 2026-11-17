@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顏色大亂鬥 - 反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container { text-align: center; max-width: 500px; margin: 0 auto; }
+        #word-display { font-size: 4rem; font-weight: bold; margin: 30px 0; min-height: 100px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .color-btn { font-size: 1.8rem; padding: 20px; border: none; border-radius: 20px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <h2>🎨 顏色大亂鬥</h2>
+        <p id="msg">請選擇文字**顯示的顏色**，而不是字面意思！</p>
+        <div id="config-box" style="margin: 20px 0;">
+            <button class="btn-big" onclick="startGame()">開始挑戰 ▶</button>
+        </div>
+        
+        <div id="word-display" style="display:none;">準備中</div>
+        
+        <div class="btn-grid" id="btn-grid" style="display:none;">
+            <button class="color-btn" style="background: #E74C3C;" onclick="checkAnswer('red')">紅色</button>
+            <button class="color-btn" style="background: #2980B9;" onclick="checkAnswer('blue')">藍色</button>
+            <button class="color-btn" style="background: #27AE60;" onclick="checkAnswer('green')">綠色</button>
+            <button class="color-btn" style="background: #F39C12;" onclick="checkAnswer('yellow')">黃色</button>
+        </div>
+        <div style="margin-top: 20px; font-size: 1.2rem; font-weight: bold;">剩餘時間：<span id="time">20</span> 秒</div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let score = 0, timeLeft = 20, timer = null, isStarted = false, currentColor = '';
+        const colors = [
+            { name: '紅色', code: '#E74C3C', key: 'red' },
+            { name: '藍色', code: '#2980B9', key: 'blue' },
+            { name: '綠色', code: '#27AE60', key: 'green' },
+            { name: '黃色', code: '#F39C12', key: 'yellow' }
+        ];
+
+        function startGame() {
+            score = 0; timeLeft = 20; isStarted = true;
+            document.getElementById('score').innerText = score;
+            document.getElementById('config-box').style.display = 'none';
+            document.getElementById('word-display').style.display = 'flex';
+            document.getElementById('btn-grid').style.display = 'grid';
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time').innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (!isStarted) return;
+            const randomWord = colors[Math.floor(Math.random() * colors.length)];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            currentColor = randomColor.key;
+            const displayObj = document.getElementById('word-display');
+            displayObj.innerText = randomWord.name;
+            displayObj.style.color = randomColor.code;
+        }
+
+        function checkAnswer(selectedKey) {
+            if (!isStarted) return;
+            if (selectedKey === currentColor) {
+                score += 1;
+                playSound('good');
+            } else {
+                score = Math.max(0, score - 1);
+                playSound('bad');
+            }
+            document.getElementById('score').innerText = score;
+            nextQuestion();
+        }
+
+        function endGame() {
+            isStarted = false;
+            clearInterval(timer);
+            document.getElementById('word-display').style.display = 'none';
+            document.getElementById('btn-grid').style.display = 'none';
+            let isNewBest = saveHighScore('color', score);
+            document.getElementById('msg').innerHTML = `時間到！總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('config-box').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

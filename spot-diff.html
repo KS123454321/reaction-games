@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>閃電找不同 - 反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container { text-align: center; max-width: 500px; margin: 0 auto; }
+        .grid { display: grid; gap: 12px; margin: 20px auto; justify-content: center; }
+        .card { background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 3rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.1s; }
+        .card:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <div class="score-display">得分：<span id="score">0</span></div>
+    </div>
+    
+    <div class="game-container">
+        <h2>🔍 閃電找不同</h2>
+        <p id="msg">找出畫面中長得不一樣的那張牌！</p>
+        
+        <div id="config-box" style="margin: 20px 0;">
+            <button class="btn-big" onclick="startGame()">開始遊戲 ▶</button>
+        </div>
+
+        <div class="grid" id="diff-grid"></div>
+        <div style="font-size: 1.2rem; font-weight: bold;">剩餘時間：<span id="time">25</span> 秒</div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let score = 0, timeLeft = 25, timer = null, isStarted = false, gridSize = 2;
+        const iconPairs = [
+            ['🐶', '🐱'], ['🍎', '🍏'], ['🚗', '🚕'], ['⚽', '🏀'], ['⭐', '🌟'], ['😀', '😁']
+        ];
+
+        function startGame() {
+            score = 0; timeLeft = 25; isStarted = true; gridSize = 2;
+            document.getElementById('score').innerText = score;
+            document.getElementById('config-box').style.display = 'none';
+            document.getElementById('msg').innerText = '找找看哪一個不一樣！';
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time').innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+            nextRound();
+        }
+
+        function nextRound() {
+            if (!isStarted) return;
+            const gridElem = document.getElementById('diff-grid');
+            gridElem.innerHTML = '';
+            
+            // 隨機決定網格大小 (2x2 到 4x4)
+            gridSize = score > 10 ? 4 : (score > 4 ? 3 : 2);
+            gridElem.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            
+            const pair = iconPairs[Math.floor(Math.random() * iconPairs.length)];
+            const normalIcon = pair[0];
+            const diffIcon = pair[1];
+            
+            const totalCount = gridSize * gridSize;
+            const diffIndex = Math.floor(Math.random() * totalCount);
+            
+            for (let i = 0; i < totalCount; i++) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.height = `${Math.min(90, 320 / gridSize)}px`;
+                card.style.width = `${Math.min(90, 320 / gridSize)}px`;
+                card.innerText = (i === diffIndex) ? diffIcon : normalIcon;
+                
+                card.onclick = () => {
+                    if (!isStarted) return;
+                    if (i === diffIndex) {
+                        score += 1;
+                        playSound('good');
+                        document.getElementById('score').innerText = score;
+                        nextRound();
+                    } else {
+                        score = Math.max(0, score - 1);
+                        playSound('bad');
+                        document.getElementById('score').innerText = score;
+                    }
+                };
+                gridElem.appendChild(card);
+            }
+        }
+
+        function endGame() {
+            isStarted = false;
+            clearInterval(timer);
+            document.getElementById('diff-grid').innerHTML = '';
+            let isNewBest = saveHighScore('diff', score);
+            document.getElementById('msg').innerHTML = `時間到！總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('config-box').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

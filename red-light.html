@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>123 木頭人 - 反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container { text-align: center; max-width: 500px; margin: 0 auto; }
+        .light-box { font-size: 5rem; margin: 20px 0; }
+        .track { background: #E0E0E0; border-radius: 20px; height: 40px; position: relative; margin: 20px 0; overflow: hidden; }
+        .player { width: 40px; height: 40px; background: #FF5722; border-radius: 50%; position: absolute; left: 0; transition: left 0.1s linear; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <div class="score-display">距離：<span id="score">0</span> m</div>
+    </div>
+    
+    <div class="game-container">
+        <h2>🚦 123 木頭人</h2>
+        <p id="msg">按住下方「往前衝」按鈕前進，看到紅燈要立刻放開！</p>
+        
+        <div class="light-box" id="light-icon">🟢</div>
+        
+        <div class="track">
+            <div class="player" id="player">🏃</div>
+        </div>
+        
+        <div id="config-box" style="margin: 20px 0;">
+            <button class="btn-big" onclick="startGame()">開始遊戲 ▶</button>
+        </div>
+
+        <div id="control-box" style="display:none;">
+            <button class="btn-big" id="hold-btn" style="width: 100%; background: #3498DB; box-shadow: 0 6px 0 #2980B9;" 
+                onmousedown="startMoving()" onmouseup="stopMoving()" 
+                ontouchstart="startMoving()" ontouchend="stopMoving()">
+                👉 按住不放往前衝
+            </button>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let score = 0, isStarted = false, isGreen = true, isMoving = false, moveInterval = null, lightTimer = null, playerPos = 0;
+        
+        function startGame() {
+            score = 0; playerPos = 0; isStarted = true; isGreen = true;
+            document.getElementById('score').innerText = score;
+            document.getElementById('player').style.left = '0%';
+            document.getElementById('config-box').style.display = 'none';
+            document.getElementById('control-box').style.display = 'block';
+            document.getElementById('msg').innerText = '綠燈亮起！快往前衝！';
+            
+            scheduleLightChange();
+        }
+
+        function scheduleLightChange() {
+            if (!isStarted) return;
+            let waitTime = Math.random() * 2000 + 1500;
+            lightTimer = setTimeout(() => {
+                isGreen = !isGreen;
+                document.getElementById('light-icon').innerText = isGreen ? '🟢' : '🔴';
+                document.getElementById('msg').innerText = isGreen ? '綠燈！前進！' : '紅燈！停！';
+                
+                if (!isGreen && isMoving) {
+                    // 紅燈還在移動 -> 犯規！
+                    failGame();
+                } else {
+                    scheduleLightChange();
+                }
+            }, waitTime);
+        }
+
+        function startMoving() {
+            if (!isStarted || isMoving) return;
+            isMoving = true;
+            moveInterval = setInterval(() => {
+                if (!isGreen) {
+                    failGame();
+                    return;
+                }
+                playerPos += 1.5;
+                if (playerPos >= 85) {
+                    winGame();
+                    return;
+                }
+                document.getElementById('player').style.left = playerPos + '%';
+                score = Math.floor(playerPos);
+                document.getElementById('score').innerText = score;
+            }, 50);
+        }
+
+        function stopMoving() {
+            isMoving = false;
+            clearInterval(moveInterval);
+        }
+
+        function failGame() {
+            stopMoving();
+            isStarted = false;
+            clearTimeout(lightTimer);
+            playSound('bad');
+            document.getElementById('control-box').style.display = 'none';
+            let isNewBest = saveHighScore('light', score);
+            document.getElementById('msg').innerHTML = `💥 紅燈移動被抓到了！總得分：<b>${score}</b> m ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('config-box').style.display = 'block';
+        }
+
+        function winGame() {
+            stopMoving();
+            isStarted = false;
+            clearTimeout(lightTimer);
+            playSound('good');
+            document.getElementById('control-box').style.display = 'none';
+            let isNewBest = saveHighScore('light', 100);
+            document.getElementById('msg').innerHTML = `🏆 成功抵達終點！總得分：<b>100</b> m ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('config-box').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

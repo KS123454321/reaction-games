@@ -1,0 +1,85 @@
+:root {
+    --bg-color: #FFF9E6;      /* 護眼暖米黃 */
+    --card-bg: #FFFFFF;
+    --text-main: #2C3E50;
+    --primary: #FF9F1C;       /* 活力橘 */
+    --success: #27AE60;       /* 確認綠 */
+    --danger: #E74C3C;        /* 警告紅 */
+    --info: #2980B9;          /* 資訊藍 */
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* 遊戲內通用的頂部導覽列 */
+.top-nav {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    padding: 12px 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+}
+
+.btn-home {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #C0392B;
+    transition: transform 0.1s;
+}
+
+.btn-home:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #C0392B;
+}
+
+.score-display {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+/* 全齡通用超大按鈕 */
+.btn-big {
+    background-color: var(--success);
+    color: white;
+    border: none;
+    padding: 16px 40px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #1E8449;
+    transition: transform 0.1s;
+    margin: 10px;
+}
+
+.btn-big:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #1E8449;
+}
