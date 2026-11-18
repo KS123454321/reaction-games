@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猴子架橋過河 - 定點挑戰與死局判定</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container { text-align: center; max-width: 600px; margin: 0 auto; }
+        
+        .status-bar {
+            display: flex; justify-content: space-around;
+            background: #FFF3CD !important; color: #2C3E50 !important;
+            padding: 10px; border-radius: 14px; font-size: 1.2rem; font-weight: bold;
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .river-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            gap: 6px;
+        }
+
+        /* 左右兩岸維持完整草地外觀，並用格子對齊起終點 */
+        .bank-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 48px;
+            min-height: 260px;
+            background: linear-gradient(135deg, #689F38, #8BC34A);
+            border-radius: 12px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+            padding: 3px 0;
+        }
+
+        .bank-slot {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            position: relative;
+        }
+        /* 指定起點與終點的特別標示框 */
+        .bank-slot.active-start {
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 0 6px rgba(255,255,255,0.8);
+        }
+        .bank-slot.active-end {
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 0 6px rgba(255,255,255,0.8);
+        }
+
+        .river-grid {
+            display: grid;
+            gap: 3px;
+            background: #0288D1;
+            padding: 6px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.25);
+        }
+        [data-theme="dark"] .river-grid {
+            background: #01579B;
+        }
+
+        .cell {
+            width: 44px;
+            height: 44px;
+            background: #29B6F6;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.1s;
+            position: relative;
+        }
+        [data-theme="dark"] .cell {
+            background: #0277BD;
+        }
+
+        .cell.island {
+            background: linear-gradient(135deg, #7CB342, #9CCC65) !important;
+            box-shadow: 0 3px 0 #558B2F;
+            transform: translateY(-1px);
+        }
+
+        .cell.rock {
+            background: #546E7A !important;
+            cursor: not-allowed;
+        }
+
+        .cell.preview-valid {
+            background: rgba(139, 195, 74, 0.75) !important;
+            border: 2px dashed #FFF;
+        }
+        .cell.preview-invalid {
+            background: rgba(231, 76, 60, 0.65) !important;
+            border: 2px dashed #FFF;
+        }
+
+        .dock-area {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .piece-preview {
+            display: grid;
+            grid-template-columns: repeat(4, 28px);
+            grid-template-rows: repeat(4, 28px);
+            gap: 2px;
+            background: rgba(0,0,0,0.05);
+            padding: 8px;
+            border-radius: 12px;
+        }
+        .p-cell {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+        }
+        .p-cell.active {
+            background: #8BC34A;
+            box-shadow: 0 2px 0 #558B2F;
+        }
+
+        .action-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-rotate {
+            background: #FF9F1C;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #D68910;
+        }
+        .btn-rotate:active { transform: translateY(3px); box-shadow: 0 1px 0 #D68910; }
+
+        .btn-reroll {
+            background: #7F8C8D;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #566573;
+        }
+        .btn-reroll:disabled { opacity: 0.4; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <button class="btn-theme" onclick="toggleTheme()">🌓 切換模式</button>
+        <div class="score-display">過關數：<span id="score">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <h2>🐒 猴子架橋過河 (定點挑戰)</h2>
+
+        <div class="status-bar">
+            <div>🌊 關卡：<span id="level">1</span></div>
+            <div>🧱 已用島嶼：<span id="blocks-used">0</span> 塊</div>
+        </div>
+
+        <div style="margin-bottom: 10px; font-size: 1.05rem; font-weight: bold;" id="msg-bar">
+            請從指定起點（🐒）鋪路連到指定終點（🍌）！
+        </div>
+
+        <!-- 河道主舞台 -->
+        <div class="river-wrapper">
+            <div class="bank-column" id="left-bank-col"></div>
+            <div class="river-grid" id="river-grid"></div>
+            <div class="bank-column" id="right-bank-col"></div>
+        </div>
+
+        <!-- 底部方塊控制區 -->
+        <div class="dock-area" id="dock-area">
+            <div>
+                <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 6px;">下一個島嶼方塊：</div>
+                <div class="piece-preview" id="piece-preview"></div>
+            </div>
+            <div class="action-btns">
+                <button class="btn-rotate" onclick="rotatePiece()">🔄 旋轉方塊 (R)</button>
+                <button class="btn-reroll" id="reroll-btn" onclick="rerollPiece()">🎲 重抽方塊 (<span id="reroll-count">2</span>)</button>
+            </div>
+        </div>
+
+        <!-- 遊戲結束畫面設定框 -->
+        <div id="gameover-box" style="display:none; margin-top: 15px; background: var(--card-bg); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <h3 style="color: #E74C3C; margin-bottom: 10px;">💥 遊戲結束！河道已經無路可走！</h3>
+            <p id="gameover-desc" style="font-size: 1.1rem; margin-bottom: 15px;"></p>
+            <button class="btn-big" onclick="restartGame()">重新挑戰 ▶</button>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let isStarted = false;
+        let isGameOver = false;
+        let level = 1;
+        let clearedCount = 0;
+        let blocksUsed = 0;
+        let rerollsLeft = 2;
+        let gridSize = 5;
+        let grid = []; 
+        let currentPiece = [];
+        let hoverPos = null;
+        let isAnimating = false;
+
+        let startRow = 0;
+        let endRow = 0;
+
+        const SHAPES = [
+            [[0,0], [0,1], [0,2]],               
+            [[0,0], [1,0], [1,1]],               
+            [[0,0], [0,1], [1,1], [1,2]],        
+            [[0,1], [1,0], [1,1], [1,2]],        
+            [[0,0], [1,0], [2,0], [2,1]],        
+            [[0,1], [1,0], [1,1], [1,2], [2,1]], 
+            [[0,0], [0,1], [1,0], [1,1]],        
+            [[0,0], [0,1]]                       
+        ];
+
+        window.addEventListener('keydown', (e) => {
+            if ((e.key === 'r' || e.key === 'R') && isStarted && !isAnimating && !isGameOver) {
+                rotatePiece();
+            }
+        });
+
+        function startGame() {
+            level = 1;
+            clearedCount = 0;
+            document.getElementById('score').innerText = clearedCount;
+            document.getElementById('gameover-box').style.display = 'none';
+            document.getElementById('dock-area').style.display = 'flex';
+            initLevel();
+        }
+
+        function restartGame() {
+            initLevel();
+        }
+
+        function initLevel() {
+            isStarted = true;
+            isGameOver = false;
+            isAnimating = false;
+            blocksUsed = 0;
+            rerollsLeft = 2;
+
+            document.getElementById('gameover-box').style.display = 'none';
+            document.getElementById('dock-area').style.display = 'flex';
+
+            gridSize = level <= 2 ? 5 : (level <= 5 ? 6 : 7);
+            grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+
+            startRow = Math.floor(Math.random() * gridSize);
+            endRow = Math.floor(Math.random() * gridSize);
+
+            const rockCount = level >= 3 ? Math.min(gridSize - 1, Math.floor(level / 2)) : 0;
+            for (let i = 0; i < rockCount; i++) {
+                let r = Math.floor(Math.random() * gridSize);
+                let c = Math.floor(Math.random() * (gridSize - 2)) + 1;
+                if ((r !== startRow || c !== 0) && (r !== endRow || c !== gridSize - 1)) {
+                    grid[r][c] = 2;
+                }
+            }
+
+            renderBanks();
+            document.getElementById('level').innerText = level;
+            document.getElementById('blocks-used').innerText = blocksUsed;
+            document.getElementById('reroll-count').innerText = rerollsLeft;
+            document.getElementById('reroll-btn').disabled = false;
+            document.getElementById('msg-bar').innerText = `請從左側 🐒 (第${startRow+1}行) 鋪路連接到右側 🍌 (第${endRow+1}行)！`;
+
+            spawnNextPiece();
+            
+            // 檢查初始抽到的方塊是否在當前河道完全無解（死局）
+            if (!hasAnyValidMove()) {
+                spawnNextPiece(); // 再給一次機會抽方塊
+            }
+
+            renderGrid();
+        }
+
+        function renderBanks() {
+            const leftCol = document.getElementById('left-bank-col');
+            const rightCol = document.getElementById('right-bank-col');
+            leftCol.innerHTML = '';
+            rightCol.innerHTML = '';
+
+            for (let i = 0; i < gridSize; i++) {
+                const lSlot = document.createElement('div');
+                lSlot.className = 'bank-slot';
+                if (i === startRow) {
+                    lSlot.classList.add('active-start');
+                    lSlot.innerHTML = '🐒';
+                }
+                leftCol.appendChild(lSlot);
+
+                const rSlot = document.createElement('div');
+                rSlot.className = 'bank-slot';
+                if (i === endRow) {
+                    rSlot.classList.add('active-end');
+                    rSlot.innerHTML = '🍌';
+                }
+                rightCol.appendChild(rSlot);
+            }
+        }
+
+        function spawnNextPiece() {
+            const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            currentPiece = shape.map(pt => [...pt]);
+            const randomRots = Math.floor(Math.random() * 4);
+            for (let i = 0; i < randomRots; i++) rotatePieceData();
+            renderPiecePreview();
+        }
+
+        function rotatePieceData() {
+            const rotated = currentPiece.map(([r, c]) => [c, -r]);
+            const minR = Math.min(...rotated.map(p => p[0]));
+            const minC = Math.min(...rotated.map(p => p[1]));
+            currentPiece = rotated.map(([r, c]) => [r - minR, c - minC]);
+        }
+
+        function rotatePiece() {
+            if (isAnimating || isGameOver) return;
+            rotatePieceData();
+            renderPiecePreview();
+            if (hoverPos) renderGrid();
+        }
+
+        function rerollPiece() {
+            if (rerollsLeft <= 0 || isAnimating || isGameOver) return;
+            rerollsLeft--;
+            document.getElementById('reroll-count').innerText = rerollsLeft;
+            if (rerollsLeft === 0) document.getElementById('reroll-btn').disabled = true;
+            spawnNextPiece();
+            if (hoverPos) renderGrid();
+
+            // 重抽後若依然死局且沒有重抽機會了，直接判定 Game Over
+            if (!hasAnyValidMove() && rerollsLeft === 0) {
+                triggerGameOver("新抽出的方塊無處可放，河道死局！");
+            }
+        }
+
+        function renderPiecePreview() {
+            const box = document.getElementById('piece-preview');
+            box.innerHTML = '';
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const div = document.createElement('div');
+                    div.className = 'p-cell';
+                    if (currentPiece.some(p => p[0] === r && p[1] === c)) {
+                        div.classList.add('active');
+                    }
+                    box.appendChild(div);
+                }
+            }
+        }
+
+        function canPlace(baseR, baseC) {
+            return currentPiece.every(([dr, dc]) => {
+                const nr = baseR + dr;
+                const nc = baseC + dc;
+                return nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && grid[nr][nc] === 0;
+            });
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('river-grid');
+            gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            gridEl.innerHTML = '';
+
+            let previewCells = [];
+            let validPreview = false;
+            if (hoverPos && !isAnimating && !isGameOver) {
+                validPreview = canPlace(hoverPos.r, hoverPos.c);
+                previewCells = currentPiece.map(([dr, dc]) => [hoverPos.r + dr, hoverPos.c + dc]);
+            }
+
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+
+                    if (grid[r][c] === 1) cell.classList.add('island');
+                    if (grid[r][c] === 2) {
+                        cell.classList.add('rock');
+                        cell.innerText = '🪨';
+                    }
+
+                    if (previewCells.some(p => p[0] === r && p[1] === c)) {
+                        cell.classList.add(validPreview ? 'preview-valid' : 'preview-invalid');
+                    }
+
+                    cell.onmouseenter = () => {
+                        if (hoverPos?.r !== r || hoverPos?.c !== c) {
+                            hoverPos = { r, c };
+                            renderGrid();
+                        }
+                    };
+                    
+                    cell.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        placePiece(r, c);
+                    });
+
+                    gridEl.appendChild(cell);
+                }
+            }
+        }
+
+        function placePiece(baseR, baseC) {
+            if (isAnimating || isGameOver) return;
+
+            if (!canPlace(baseR, baseC)) {
+                playSound('bad');
+                document.getElementById('msg-bar').innerText = '⚠️ 這裡放不下或超出邊界！請換個位置或按 R 旋轉。';
+                return;
+            }
+
+            currentPiece.forEach(([dr, dc]) => {
+                grid[baseR + dr][baseC + dc] = 1;
+            });
+            blocksUsed++;
+            document.getElementById('blocks-used').innerText = blocksUsed;
+            playSound('good');
+
+            const path = findBridgePath();
+            if (path) {
+                hoverPos = null;
+                renderGrid();
+                animateMonkeyCross(path);
+            } else {
+                spawnNextPiece();
+                renderGrid();
+
+                // 💡 核心死局判定：放置後若發現新方塊在河道上已經無處可放，直接 Game Over！
+                if (!hasAnyValidMove()) {
+                    triggerGameOver("方塊再也放不進河道了，空間已被卡死！");
+                }
+            }
+        }
+
+        function findBridgePath() {
+            if (grid[startRow][0] !== 1 || grid[endRow][gridSize - 1] !== 1) return null;
+
+            let queue = [{ r: startRow, c: 0, path: [[startRow, 0]] }];
+            let visited = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+            visited[startRow][0] = true;
+
+            const dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                if (curr.r === endRow && curr.c === gridSize - 1) return curr.path;
+
+                for (let [dr, dc] of dirs) {
+                    const nr = curr.r + dr;
+                    const nc = curr.c + dc;
+                    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && !visited[nr][nc] && grid[nr][nc] === 1) {
+                        visited[nr][nc] = true;
+                        queue.push({ r: nr, c: nc, path: [...curr.path, [nr, nc]] });
+                    }
+                }
+            }
+            return null;
+        }
+
+        function hasAnyValidMove() {
+            let testPiece = currentPiece.map(p => [...p]);
+            for (let rot = 0; rot < 4; rot++) {
+                for (let r = 0; r < gridSize; r++) {
+                    for (let c = 0; c < gridSize; c++) {
+                        const ok = testPiece.every(([dr, dc]) => {
+                            const nr = r + dr, nc = c + dc;
+                            return nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && grid[nr][nc] === 0;
+                        });
+                        if (ok) return true;
+                    }
+                }
+                const rotated = testPiece.map(([r, c]) => [c, -r]);
+                const minR = Math.min(...rotated.map(p => p[0]));
+                const minC = Math.min(...rotated.map(p => p[1]));
+                testPiece = rotated.map(([r, c]) => [r - minR, c - minC]);
+            }
+            return false;
+        }
+
+        function triggerGameOver(reason) {
+            isGameOver = true;
+            playSound('bad');
+            const isNewBest = saveHighScore('monkey', clearedCount);
+            
+            document.getElementById('msg-bar').innerText = '💥 遊戲結束！';
+            document.getElementById('dock-area').style.display = 'none';
+            document.getElementById('gameover-box').style.display = 'block';
+            document.getElementById('gameover-desc').innerHTML = `
+                ${reason}<br>
+                總共突破關卡：<b>${clearedCount}</b> 關<br>
+                ${isNewBest ? '🎉 <span style="color: #27AE60;">恭喜創下最高分紀錄！</span>' : ''}
+            `;
+        }
+
+        function animateMonkeyCross(path) {
+            isAnimating = true;
+            document.getElementById('msg-bar').innerText = '🎉 定點路線連通成功！小猴子過河囉！';
+
+            let step = 0;
+            const cells = document.querySelectorAll('.cell');
+
+            const walkInterval = setInterval(() => {
+                cells.forEach(c => { if (c.innerText === '🐒') c.innerText = ''; });
+
+                if (step < path.length) {
+                    const [r, c] = path[step];
+                    const targetCell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+                    if (targetCell) targetCell.innerText = '🐒';
+                    playSound('good');
+                    step++;
+                } else {
+                    clearInterval(walkInterval);
+                    clearedCount++;
+                    document.getElementById('score').innerText = clearedCount;
+                    saveHighScore('monkey', clearedCount);
+                    document.getElementById('msg-bar').innerText = `🍌 成功抵達終點！準備進入第 ${level + 1} 關...`;
+
+                    setTimeout(() => {
+                        level++;
+                        initLevel();
+                    }, 1500);
+                }
+            }, 220);
+        }
+
+        window.addEventListener('DOMContentLoaded', startGame);
+    </script>
+</body>
+</html>
