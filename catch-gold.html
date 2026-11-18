@@ -35,13 +35,17 @@
 
     <script src="common.js"></script>
     <script>
-        let score = 0, timeLeft = 25, isStarted = false, gameTimer = null, dropTimer = null;
+        let score = 0, timeLeft = 25, isStarted = false;
+        let gameTimer = null, dropTimer = null, clockTimer = null;
         let basketX = 190;
         const items = [];
 
         function startGame() {
-            score = 0; timeLeft = 25; isStarted = true;
+            score = 0; 
+            timeLeft = 25; 
+            isStarted = true;
             document.getElementById('score').innerText = score;
+            document.getElementById('time').innerText = timeLeft;
             document.getElementById('config-box').style.display = 'none';
             document.getElementById('msg').innerText = '左右滑動接住元寶！';
             
@@ -54,16 +58,27 @@
             basketX = (area.clientWidth - 70) / 2;
             document.getElementById('basket').style.left = basketX + 'px';
 
+            // 清除所有舊的計時器
             if (gameTimer) clearInterval(gameTimer);
             if (dropTimer) clearInterval(dropTimer);
+            if (clockTimer) clearInterval(clockTimer);
 
+            // 1. 遊戲畫面與物理更新迴圈 (每 30 毫秒)
             gameTimer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('time').innerText = timeLeft;
-                if (timeLeft <= 0) endGame();
-                updateItems();
+                if (isStarted) updateItems();
             }, 30);
 
+            // 2. 正常的一秒倒數計時器 (每 1000 毫秒)
+            clockTimer = setInterval(() => {
+                if (!isStarted) return;
+                timeLeft--;
+                document.getElementById('time').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // 3. 掉落物生成器 (每 650 毫秒)
             dropTimer = setInterval(spawnItem, 650);
         }
 
@@ -108,15 +123,15 @@
             
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
-                item.y += 4; // 下落速度調適平緩
+                item.y += 4; // 下落速度
                 item.el.style.top = item.y + 'px';
                 
-                // 判斷是否掉落到籃子的高度區間 (距離底部大約 40px ~ 90px 之間)
+                // 判斷是否掉落到籃子的高度區間
                 const itemBottom = item.y + 40;
                 const catchLine = areaHeight - 85; 
 
                 if (itemBottom >= catchLine && item.y <= areaHeight - 30) {
-                    // 檢查水平範圍是否有對準籃子（容許左右各 15px 誤差）
+                    // 檢查水平範圍是否有對準籃子
                     if (item.x + 20 >= basketX - 10 && item.x + 20 <= basketX + 80) {
                         if (item.isBomb) {
                             score = Math.max(0, score - 5);
@@ -144,6 +159,8 @@
             isStarted = false;
             clearInterval(gameTimer);
             clearInterval(dropTimer);
+            clearInterval(clockTimer);
+            
             document.querySelectorAll('.item').forEach(el => el.remove());
             items.length = 0;
             
