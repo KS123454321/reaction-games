@@ -15,7 +15,6 @@
             margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        /* 💡 徹底解決縮放跳動：固定看板尺寸、文字區塊設定固定寬度與置中 */
         .light-panel {
             background: var(--card-bg);
             border-radius: 20px;
@@ -39,7 +38,7 @@
         .light-info { 
             text-align: left; 
             flex-grow: 1; 
-            width: 340px; /* 固定文字區塊寬度，杜絕字數多寡造成的畫面縮放 */
+            width: 340px;
             overflow: hidden;
         }
         .light-text { 
@@ -112,7 +111,6 @@
             <div>🏁 本關進度：<span id="stage-dist">0</span> / 100 m</div>
         </div>
 
-        <!-- 穩定不縮放的紅綠燈看板 -->
         <div class="light-panel">
             <div class="light-icon" id="light-icon">🟢</div>
             <div class="light-info">
@@ -129,7 +127,7 @@
         
         <div id="config-box" style="margin: 15px 0;">
             <button class="btn-big" onclick="startGame()">開始挑戰 ▶</button>
-            <div style="margin-top: 8px; font-size: 0.95rem; opacity: 0.75;">💡 提示：綠燈不走飛碟會暴走！橘燈急煞有 +6m 獎勵！</div>
+            <div style="margin-top: 8px; font-size: 0.95rem; opacity: 0.75;">💡 提示：綠燈發呆超過1秒飛碟會加速！橘燈急煞有 +6m 獎勵！</div>
         </div>
 
         <div id="control-box" style="display:none; margin-top: 15px;">
@@ -146,6 +144,7 @@
         let ufoProgress = -12;   
         
         let lightState = 'green'; 
+        let greenStartTime = 0; 
         let isMoving = false;
         let ranDuringOrange = false; 
 
@@ -206,10 +205,11 @@
             const subEl = document.getElementById('sub-msg');
 
             if (state === 'green') {
+                greenStartTime = Date.now();
                 iconEl.innerText = '🟢';
                 statusEl.innerText = '綠燈！快往前衝';
                 statusEl.style.color = '#27AE60';
-                subEl.innerText = '綠燈不走，飛碟會暴走加速！';
+                subEl.innerText = '趕快按住前進！發呆超過 1 秒飛碟會加速！';
                 ranDuringOrange = false;
             } else if (state === 'orange') {
                 iconEl.innerText = '🟠';
@@ -220,7 +220,7 @@
                 iconEl.innerText = '🔴';
                 statusEl.innerText = '紅燈！不許動';
                 statusEl.style.color = '#E74C3C';
-                subEl.innerText = '千萬別按按鈕，會被抓走！';
+                subEl.innerText = '飛碟正在逼近，但紅燈不會發射光線！';
             }
         }
 
@@ -228,9 +228,8 @@
             if (!isStarted) return;
             clearTimeout(lightTimer);
 
-            // 難度越高，燈號變換節奏越快且紅燈停留時間越長
             if (lightState === 'green') {
-                const greenDuration = Math.max(500, (1600 - level * 120) + Math.random() * 600);
+                const greenDuration = Math.max(1000, (2000 - level * 100) + Math.random() * 600);
                 lightTimer = setTimeout(() => {
                     if (!isStarted) return;
                     setLight('orange');
@@ -238,7 +237,7 @@
                 }, greenDuration);
 
             } else if (lightState === 'orange') {
-                const orangeDuration = Math.max(300, 900 - (level - 1) * 80);
+                const orangeDuration = Math.max(300, 900 - (level - 1) * 70);
                 lightTimer = setTimeout(() => {
                     if (!isStarted) return;
                     setLight('red');
@@ -250,7 +249,7 @@
                 }, orangeDuration);
 
             } else if (lightState === 'red') {
-                const redDuration = Math.min(2500, 950 + (level - 1) * 150 + Math.random() * 500);
+                const redDuration = Math.min(2400, 950 + (level - 1) * 120 + Math.random() * 500);
                 lightTimer = setTimeout(() => {
                     if (!isStarted) return;
                     setLight('green');
@@ -271,11 +270,11 @@
 
         function stopMoving() {
             if (!isStarted) return;
-            
-            // 💡 懲罰機制：如果在綠燈時故意「放開手停下不跑」，飛碟會發動外星瞬移向前暴衝！
-            if (!isMoving && lightState === 'green') {
-                ufoProgress += 4.5; // 瞬移懲罰
-                document.getElementById('sub-msg').innerText = '⚡ 綠燈發呆！飛碟瞬移追擊！';
+            const timeSinceGreen = Date.now() - greenStartTime;
+
+            if (isMoving && lightState === 'green' && timeSinceGreen > 1000) {
+                ufoProgress += 3.5;
+                document.getElementById('sub-msg').innerText = '⚡ 綠燈中途停下！飛碟追擊！';
             }
 
             if (isMoving && lightState === 'orange' && ranDuringOrange) {
@@ -293,15 +292,8 @@
         function updatePhysics() {
             if (!isStarted) return;
 
-            // 💡 明顯提高難度曲線：每升一關飛碟速度明顯加快（比之前增加約 40% 的成長率）
-            let ufoSpeed = 0.28 + (level - 1) * 0.11;
-
-            // 💡 懲罰機制：如果現在是綠燈，但玩家「沒有在移動」（在原地發呆），飛碟速度直接加倍暴走！
-            if (lightState === 'green' && !isMoving) {
-                ufoSpeed *= 2.2; 
-            }
-
-            ufoProgress += ufoSpeed;
+            // 1. 玩家移動速度
+            const playerSpeed = 0.45;
 
             if (isMoving) {
                 if (lightState === 'red') {
@@ -312,14 +304,35 @@
                     ranDuringOrange = true;
                 }
 
-                const playerSpeed = 0.45;
                 stageProgress += playerSpeed;
                 totalDistance += playerSpeed;
 
                 if (checkLevelUp()) return;
             }
 
-            if (ufoProgress >= stageProgress - 2) {
+            // 2. 飛碟追擊邏輯：任何燈號下都會持續逼近
+            let ufoSpeed = 0.18 + (level - 1) * 0.03;
+            const timeSinceGreen = Date.now() - greenStartTime;
+
+            // 綠燈超過 1 秒緩衝期後，若玩家還沒開始跑，飛碟才會加速催促
+            if (lightState === 'green' && !isMoving && timeSinceGreen > 1000) {
+                ufoSpeed *= 1.6;
+                document.getElementById('sub-msg').innerText = '⚠️ 發呆太久啦！飛碟加速中！';
+            }
+
+            ufoProgress += ufoSpeed;
+
+            // 紅燈時飛碟最多懸停在玩家正上方（不會超前跑過頭）
+            if (lightState === 'red' && ufoProgress > stageProgress) {
+                ufoProgress = stageProgress;
+            }
+
+            // 3. 光線抓人判定：
+            // - 紅燈時不發射光線（安全保護）
+            // - 綠燈剛亮起的前 1 秒內不發射光線（給玩家起跑逃離的緩衝時間）
+            const isBeamSafe = (lightState === 'red') || (lightState === 'green' && timeSinceGreen <= 1000);
+
+            if (!isBeamSafe && ufoProgress >= stageProgress - 2) {
                 gameOver('ufo');
                 return;
             }
@@ -331,10 +344,9 @@
             if (stageProgress >= 100) {
                 level++;
                 stageProgress = 0;
-                ufoProgress = -12; // 飛碟拉開距離重置
+                ufoProgress = -12;
                 playSound('good');
                 
-                // 過關瞬間強制綠燈 1 秒保護，然後恢復隨機循環
                 setLight('green');
                 clearTimeout(lightTimer);
                 lightTimer = setTimeout(() => {
