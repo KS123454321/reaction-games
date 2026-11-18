@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>猴子架橋過河 - 定點挑戰與死局判定</title>
+    <title>猴子架橋過河 - 手機雙擊放置版</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .game-container { text-align: center; max-width: 600px; margin: 0 auto; }
@@ -27,7 +27,6 @@
             gap: 6px;
         }
 
-        /* 左右兩岸維持完整草地外觀，並用格子對齊起終點 */
         .bank-column {
             display: flex;
             flex-direction: column;
@@ -48,13 +47,7 @@
             font-size: 1.8rem;
             position: relative;
         }
-        /* 指定起點與終點的特別標示框 */
-        .bank-slot.active-start {
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 8px;
-            box-shadow: 0 0 6px rgba(255,255,255,0.8);
-        }
-        .bank-slot.active-end {
+        .bank-slot.active-start, .bank-slot.active-end {
             background: rgba(255, 255, 255, 0.4);
             border-radius: 8px;
             box-shadow: 0 0 6px rgba(255,255,255,0.8);
@@ -84,6 +77,7 @@
             cursor: pointer;
             transition: background-color 0.15s, transform 0.1s;
             position: relative;
+            -webkit-tap-highlight-color: transparent; /* 消除手機點擊高亮方塊 */
         }
         [data-theme="dark"] .cell {
             background: #0277BD;
@@ -101,11 +95,11 @@
         }
 
         .cell.preview-valid {
-            background: rgba(139, 195, 74, 0.75) !important;
+            background: rgba(139, 195, 74, 0.85) !important;
             border: 2px dashed #FFF;
         }
         .cell.preview-invalid {
-            background: rgba(231, 76, 60, 0.65) !important;
+            background: rgba(231, 76, 60, 0.75) !important;
             border: 2px dashed #FFF;
         }
 
@@ -181,7 +175,7 @@
     </div>
 
     <div class="game-container">
-        <h2>🐒 猴子架橋過河 (定點挑戰)</h2>
+        <h2>🐒 猴子架橋過河 (手機雙擊版)</h2>
 
         <div class="status-bar">
             <div>🌊 關卡：<span id="level">1</span></div>
@@ -189,17 +183,15 @@
         </div>
 
         <div style="margin-bottom: 10px; font-size: 1.05rem; font-weight: bold;" id="msg-bar">
-            請從指定起點（🐒）鋪路連到指定終點（🍌）！
+            點擊格子預覽位置，再點一次確認放置！
         </div>
 
-        <!-- 河道主舞台 -->
         <div class="river-wrapper">
             <div class="bank-column" id="left-bank-col"></div>
             <div class="river-grid" id="river-grid"></div>
             <div class="bank-column" id="right-bank-col"></div>
         </div>
 
-        <!-- 底部方塊控制區 -->
         <div class="dock-area" id="dock-area">
             <div>
                 <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 6px;">下一個島嶼方塊：</div>
@@ -211,7 +203,6 @@
             </div>
         </div>
 
-        <!-- 遊戲結束畫面設定框 -->
         <div id="gameover-box" style="display:none; margin-top: 15px; background: var(--card-bg); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
             <h3 style="color: #E74C3C; margin-bottom: 10px;">💥 遊戲結束！河道已經無路可走！</h3>
             <p id="gameover-desc" style="font-size: 1.1rem; margin-bottom: 15px;"></p>
@@ -230,7 +221,7 @@
         let gridSize = 5;
         let grid = []; 
         let currentPiece = [];
-        let hoverPos = null;
+        let selectedPos = null; // 儲存玩家點擊預覽中的座標
         let isAnimating = false;
 
         let startRow = 0;
@@ -272,6 +263,7 @@
             isAnimating = false;
             blocksUsed = 0;
             rerollsLeft = 2;
+            selectedPos = null;
 
             document.getElementById('gameover-box').style.display = 'none';
             document.getElementById('dock-area').style.display = 'flex';
@@ -296,13 +288,11 @@
             document.getElementById('blocks-used').innerText = blocksUsed;
             document.getElementById('reroll-count').innerText = rerollsLeft;
             document.getElementById('reroll-btn').disabled = false;
-            document.getElementById('msg-bar').innerText = `請從左側 🐒 (第${startRow+1}行) 鋪路連接到右側 🍌 (第${endRow+1}行)！`;
+            document.getElementById('msg-bar').innerText = `請從左側 🐒 (第${startRow+1}行) 連到右側 🍌 (第${endRow+1}行)！`;
 
             spawnNextPiece();
-            
-            // 檢查初始抽到的方塊是否在當前河道完全無解（死局）
             if (!hasAnyValidMove()) {
-                spawnNextPiece(); // 再給一次機會抽方塊
+                spawnNextPiece();
             }
 
             renderGrid();
@@ -352,18 +342,18 @@
             if (isAnimating || isGameOver) return;
             rotatePieceData();
             renderPiecePreview();
-            if (hoverPos) renderGrid();
+            renderGrid();
         }
 
         function rerollPiece() {
             if (rerollsLeft <= 0 || isAnimating || isGameOver) return;
             rerollsLeft--;
+            selectedPos = null;
             document.getElementById('reroll-count').innerText = rerollsLeft;
             if (rerollsLeft === 0) document.getElementById('reroll-btn').disabled = true;
             spawnNextPiece();
-            if (hoverPos) renderGrid();
+            renderGrid();
 
-            // 重抽後若依然死局且沒有重抽機會了，直接判定 Game Over
             if (!hasAnyValidMove() && rerollsLeft === 0) {
                 triggerGameOver("新抽出的方塊無處可放，河道死局！");
             }
@@ -399,9 +389,9 @@
 
             let previewCells = [];
             let validPreview = false;
-            if (hoverPos && !isAnimating && !isGameOver) {
-                validPreview = canPlace(hoverPos.r, hoverPos.c);
-                previewCells = currentPiece.map(([dr, dc]) => [hoverPos.r + dr, hoverPos.c + dc]);
+            if (selectedPos && !isAnimating && !isGameOver) {
+                validPreview = canPlace(selectedPos.r, selectedPos.c);
+                previewCells = currentPiece.map(([dr, dc]) => [selectedPos.r + dr, selectedPos.c + dc]);
             }
 
             for (let r = 0; r < gridSize; r++) {
@@ -421,16 +411,24 @@
                         cell.classList.add(validPreview ? 'preview-valid' : 'preview-invalid');
                     }
 
-                    cell.onmouseenter = () => {
-                        if (hoverPos?.r !== r || hoverPos?.c !== c) {
-                            hoverPos = { r, c };
-                            renderGrid();
-                        }
-                    };
-                    
+                    // 💡 手機與電腦通用的點擊互動：
+                    // 第一次點擊：選定位置並顯示預覽
+                    // 第二次點擊同一個合法位置：直接確認放置方塊！
                     cell.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        placePiece(r, c);
+                        if (isAnimating || isGameOver) return;
+
+                        if (selectedPos && selectedPos.r === r && selectedPos.c === c && validPreview) {
+                            // 第二次點擊：確認放置
+                            placePiece(r, c);
+                        } else {
+                            // 第一次點擊：顯示該處的預覽
+                            selectedPos = { r, c };
+                            renderGrid();
+                            document.getElementById('msg-bar').innerText = validPreview ? 
+                                '👉 位置合適！再點一次該格子即可確認放置。' : 
+                                '⚠️ 這裡放不下！請點選其他位置或旋轉方塊。';
+                        }
                     });
 
                     gridEl.appendChild(cell);
@@ -443,7 +441,7 @@
 
             if (!canPlace(baseR, baseC)) {
                 playSound('bad');
-                document.getElementById('msg-bar').innerText = '⚠️ 這裡放不下或超出邊界！請換個位置或按 R 旋轉。';
+                document.getElementById('msg-bar').innerText = '⚠️ 這裡放不下或超出邊界！';
                 return;
             }
 
@@ -451,19 +449,18 @@
                 grid[baseR + dr][baseC + dc] = 1;
             });
             blocksUsed++;
+            selectedPos = null; // 重置選取狀態
             document.getElementById('blocks-used').innerText = blocksUsed;
             playSound('good');
 
             const path = findBridgePath();
             if (path) {
-                hoverPos = null;
                 renderGrid();
                 animateMonkeyCross(path);
             } else {
                 spawnNextPiece();
                 renderGrid();
 
-                // 💡 核心死局判定：放置後若發現新方塊在河道上已經無處可放，直接 Game Over！
                 if (!hasAnyValidMove()) {
                     triggerGameOver("方塊再也放不進河道了，空間已被卡死！");
                 }
