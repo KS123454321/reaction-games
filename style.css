@@ -1,11 +1,25 @@
+/*預設：護眼暖米黃模式*/
 :root {
-    --bg-color: #FFF9E6;      /* 護眼暖米黃 */
+    --bg-color: #FFF9E6;      /* 溫暖護眼米黃 */
     --card-bg: #FFFFFF;
     --text-main: #2C3E50;
-    --primary: #FF9F1C;       /* 活力橘 */
-    --success: #27AE60;       /* 確認綠 */
-    --danger: #E74C3C;        /* 警告紅 */
-    --info: #2980B9;          /* 資訊藍 */
+    --play-area-bg: #FFFFFF;  /* 遊戲區背景 */
+    --primary: #FF9F1C;       
+    --success: #27AE60;       
+    --danger: #E74C3C;        
+    --info: #2980B9;          
+}
+
+/* 深色 (黑色) 模式 */
+[data-theme="dark"] {
+    --bg-color: #121212;      /* 沉浸純黑/深灰背景 */
+    --card-bg: #1E1E1E;       /* 卡片深色 */
+    --text-main: #E0E0E0;     /* 柔和白字（避免純白刺眼） */
+    --play-area-bg: #181818;  /* 遊戲區深色 */
+    --primary: #F39C12;
+    --success: #2ECC71;
+    --danger: #E74C3C;
+    --info: #3498DB;
 }
 
 * {
@@ -24,6 +38,7 @@ body {
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 /* 遊戲內通用的頂部導覽列 */
@@ -36,7 +51,7 @@ body {
     background: var(--card-bg);
     padding: 12px 20px;
     border-radius: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     margin-bottom: 20px;
 }
 
@@ -50,12 +65,19 @@ body {
     border-radius: 14px;
     cursor: pointer;
     box-shadow: 0 4px 0 #C0392B;
-    transition: transform 0.1s;
 }
 
-.btn-home:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 #C0392B;
+/* 主題切換按鈕樣式 */
+.btn-theme {
+    background-color: var(--info);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #1B4F72;
 }
 
 .score-display {
@@ -75,11 +97,4 @@ body {
     border-radius: 50px;
     cursor: pointer;
     box-shadow: 0 6px 0 #1E8449;
-    transition: transform 0.1s;
-    margin: 10px;
-}
-
-.btn-big:active {
-    transform: translateY(4px);
-    box-shadow: 0 2px 0 #1E8449;
 }

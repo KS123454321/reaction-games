@@ -6,21 +6,69 @@
     <title>天降接元寶 - 反應遊樂園</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .game-container { text-align: center; max-width: 450px; margin: 0 auto; position: relative; }
-        .play-area { width: 100%; height: 380px; background: #FFFFFF; border-radius: 20px; position: relative; overflow: hidden; margin: 15px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.08); touch-action: none; }
-        .basket { width: 70px; height: 50px; position: absolute; bottom: 10px; left: 190px; font-size: 3rem; display: flex; align-items: center; justify-content: center; }
+        .game-container { text-align: center; max-width: 480px; margin: 0 auto; position: relative; }
+	/* 狀態列：獨立固定顏色，避免在深色模式下看不清楚 */
+        .status-bar { 
+            display: flex; 
+            justify-content: space-around; 
+            background: #FFF3CD !important; /* 固定溫暖底色 */
+            color: #2C3E50 !important;       /* 固定深色字，確保清晰 */
+            padding: 10px; 
+            border-radius: 14px; 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        }
+	.play-area { 
+	    width: 100%; 
+	    height: 400px; 
+	    background: var(--play-area-bg); /* 👈 改成使用變數，會隨著黑白模式自動變色！ */
+	    color: var(--text-main);           /* 確保文字在深色時也是亮字 */
+	    border-radius: 20px; 
+	    position: relative; 
+	    overflow: hidden; 
+	    margin: 10px 0; 
+	    box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+	    touch-action: none; 
+	    cursor: pointer; 
+	}
+        .basket { width: 90px; height: 50px; position: absolute; bottom: 10px; left: 190px; font-size: 3.2rem; display: flex; align-items: center; justify-content: center; }
         .item { position: absolute; font-size: 2.2rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+	/* 提示列也同步調整 */
+        .tip-bar { 
+            font-size: 1rem; 
+            color: #1B4F72 !important;       /* 固定清晰深藍字 */
+            background: #D4EFDF !important;  /* 固定柔和綠底 */
+            padding: 8px; 
+            border-radius: 10px; 
+            margin-bottom: 10px; 
+        }
+
     </style>
 </head>
 <body>
     <div class="top-nav">
         <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+	<button class="btn-theme" onclick="toggleTheme()">🌓 模式</button>
         <div class="score-display">金幣：<span id="score">0</span></div>
     </div>
     
     <div class="game-container">
-        <h2>🧧 天降接元寶</h2>
-        <p id="msg">左右滑動接元寶，小心不要接到鞭炮！</p>
+        <h2>🧧 天降接元寶 (進階關卡版)</h2>
+        
+        <!-- 狀態列：等級、生命值 -->
+        <div class="status-bar">
+            <div>🔥 關卡：<span id="level">1</span></div>
+            <div>❤️ 生命：<span id="lives">♥♥♥</span></div>
+            <div>🎯 進度：<span id="progress">0</span>/20</div>
+        </div>
+
+        <div class="tip-bar">
+            💡 提示：接元寶(🪙)+1，避開鞭炮(🧨)-1心；稀有道具：愛心(❤️補血)、星星(⭐清空)！
+        </div>
+
+        <p id="msg">左右滑動接住元寶，挑戰越來越快的速度！</p>
         
         <div id="config-box" style="margin: 10px 0;">
             <button class="btn-big" onclick="startGame()">開始遊戲 ▶</button>
@@ -29,25 +77,24 @@
         <div class="play-area" id="play-area" onmousemove="moveBasket(event)" ontouchmove="moveBasketTouch(event)">
             <div class="basket" id="basket">🧺</div>
         </div>
-        
-        <div style="font-size: 1.2rem; font-weight: bold;">剩餘時間：<span id="time">25</span> 秒</div>
     </div>
 
     <script src="common.js"></script>
     <script>
-        let score = 0, timeLeft = 25, isStarted = false;
-        let gameTimer = null, dropTimer = null, clockTimer = null;
+        let score = 0, level = 1, lives = 3, progress = 0, isStarted = false;
+        let gameTimer = null, dropTimer = null;
         let basketX = 190;
+        let dropSpeed = 3.5; // 初始下落速度
+        let spawnInterval = 700; // 生成頻率
         const items = [];
 
         function startGame() {
-            score = 0; 
-            timeLeft = 25; 
-            isStarted = true;
-            document.getElementById('score').innerText = score;
-            document.getElementById('time').innerText = timeLeft;
+            score = 0; level = 1; lives = 3; progress = 0; isStarted = true;
+            dropSpeed = 3.5; spawnInterval = 700;
+            
+            updateUI();
             document.getElementById('config-box').style.display = 'none';
-            document.getElementById('msg').innerText = '左右滑動接住元寶！';
+            document.getElementById('msg').innerText = '關卡 1 開始！快接元寶！';
             
             // 清除舊掉落物
             document.querySelectorAll('.item').forEach(el => el.remove());
@@ -55,39 +102,43 @@
 
             // 確保籃子重置在中間
             const area = document.getElementById('play-area');
-            basketX = (area.clientWidth - 70) / 2;
+            basketX = (area.clientWidth - 90) / 2;
             document.getElementById('basket').style.left = basketX + 'px';
 
-            // 清除所有舊的計時器
             if (gameTimer) clearInterval(gameTimer);
             if (dropTimer) clearInterval(dropTimer);
-            if (clockTimer) clearInterval(clockTimer);
 
-            // 1. 遊戲畫面與物理更新迴圈 (每 30 毫秒)
+            // 遊戲物理與更新迴圈 (每 30 毫秒)
             gameTimer = setInterval(() => {
                 if (isStarted) updateItems();
             }, 30);
 
-            // 2. 正常的一秒倒數計時器 (每 1000 毫秒)
-            clockTimer = setInterval(() => {
-                if (!isStarted) return;
-                timeLeft--;
-                document.getElementById('time').innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    endGame();
-                }
-            }, 1000);
+            // 掉落物生成器
+            resetDropTimer();
+        }
 
-            // 3. 掉落物生成器 (每 650 毫秒)
-            dropTimer = setInterval(spawnItem, 650);
+        function resetDropTimer() {
+            if (dropTimer) clearInterval(dropTimer);
+            dropTimer = setInterval(spawnItem, spawnInterval);
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('level').innerText = level;
+            document.getElementById('progress').innerText = progress;
+            
+            let hearts = '';
+            for (let i = 0; i < lives; i++) hearts += '♥';
+            for (let i = lives; i < 3; i++) hearts += '♡';
+            document.getElementById('lives').innerText = hearts;
         }
 
         function moveBasket(e) {
             if (!isStarted) return;
             const area = document.getElementById('play-area');
             const rect = area.getBoundingClientRect();
-            basketX = e.clientX - rect.left - 35;
-            basketX = Math.max(0, Math.min(area.clientWidth - 70, basketX));
+            basketX = e.clientX - rect.left - 45; 
+            basketX = Math.max(-20, Math.min(area.clientWidth - 70, basketX));
             document.getElementById('basket').style.left = basketX + 'px';
         }
 
@@ -95,18 +146,39 @@
             if (!isStarted) return;
             const area = document.getElementById('play-area');
             const rect = area.getBoundingClientRect();
-            basketX = e.touches[0].clientX - rect.left - 35;
-            basketX = Math.max(0, Math.min(area.clientWidth - 70, basketX));
+            basketX = e.touches[0].clientX - rect.left - 45;
+            basketX = Math.max(-20, Math.min(area.clientWidth - 70, basketX));
             document.getElementById('basket').style.left = basketX + 'px';
         }
 
-        function spawnItem() {
+	function spawnItem() {
             if (!isStarted) return;
             const area = document.getElementById('play-area');
-            const isBomb = Math.random() < 0.25;
+            
+            // 💡 這裡可以直接設定每個道具的權重（總和 100 最好算）
+            const chances = [
+                { type: 'coin', emoji: '🪙', weight: 75 }, // 75%
+                { type: 'bomb', emoji: '🧨', weight: 23 }, // 23%
+                { type: 'heart', emoji: '❤️', weight: 1 }, // 1%
+                { type: 'star', emoji: '⭐', weight: 1 }  // 1%
+            ];
+
+            // 自動計算總權重
+            const totalWeight = chances.reduce((sum, item) => sum + item.weight, 0);
+            let randomNum = Math.random() * totalWeight;
+            
+            let selected = chances[0];
+            for (let item of chances) {
+                if (randomNum < item.weight) {
+                    selected = item;
+                    break;
+                }
+                randomNum -= item.weight;
+            }
+
             const elem = document.createElement('div');
             elem.className = 'item';
-            elem.innerText = isBomb ? '🧨' : '🪙';
+            elem.innerText = selected.emoji;
             
             const maxX = area.clientWidth - 40;
             const x = Math.random() * Math.max(10, maxX);
@@ -114,7 +186,7 @@
             elem.style.top = '0px';
             area.appendChild(elem);
             
-            items.push({ el: elem, x: x, y: 0, isBomb: isBomb });
+            items.push({ el: elem, x: x, y: 0, type: selected.type });
         }
 
         function updateItems() {
@@ -123,49 +195,85 @@
             
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
-                item.y += 4; // 下落速度
+                item.y += dropSpeed;
                 item.el.style.top = item.y + 'px';
                 
-                // 判斷是否掉落到籃子的高度區間
                 const itemBottom = item.y + 40;
                 const catchLine = areaHeight - 85; 
 
                 if (itemBottom >= catchLine && item.y <= areaHeight - 30) {
-                    // 檢查水平範圍是否有對準籃子
-                    if (item.x + 20 >= basketX - 10 && item.x + 20 <= basketX + 80) {
-                        if (item.isBomb) {
-                            score = Math.max(0, score - 5);
-                            playSound('bad');
-                        } else {
-                            score += 1;
-                            playSound('good');
-                        }
-                        document.getElementById('score').innerText = score;
+                    if (item.x + 20 >= basketX - 15 && item.x + 20 <= basketX + 105) {
+                        handleCatch(item.type);
                         item.el.remove();
                         items.splice(i, 1);
                         continue;
                     }
                 }
                 
-                // 掉出畫面底部移除
                 if (item.y > areaHeight - 20) {
+                    // 只有元寶漏接才會扣生命值
+                    if (item.type === 'coin') {
+                        lives--;
+                        playSound('bad');
+                        updateUI();
+                        if (lives <= 0) {
+                            endGame();
+                            return;
+                        }
+                    }
                     item.el.remove();
                     items.splice(i, 1);
                 }
             }
         }
 
+        function handleCatch(type) {
+            if (type === 'coin') {
+                score += 1;
+                progress += 1;
+                playSound('good');
+                
+                if (progress >= 20) {
+                    levelUp();
+                }
+            } else if (type === 'bomb') {
+                lives--;
+                playSound('bad');
+                if (lives <= 0) {
+                    endGame();
+                    return;
+                }
+            } else if (type === 'heart') {
+                lives = Math.min(3, lives + 1);
+                playSound('good');
+            } else if (type === 'star') {
+                items.forEach(item => item.el.remove());
+                items.length = 0;
+                playSound('good');
+            }
+            updateUI();
+        }
+
+        function levelUp() {
+            level++;
+            progress = 0;
+            dropSpeed += 0.8; 
+            spawnInterval = Math.max(350, spawnInterval - 60);
+            resetDropTimer();
+            
+            document.getElementById('msg').innerText = `🎉 恭喜晉級到 LEVEL ${level}！速度加快了！`;
+        }
+
         function endGame() {
             isStarted = false;
             clearInterval(gameTimer);
             clearInterval(dropTimer);
-            clearInterval(clockTimer);
             
             document.querySelectorAll('.item').forEach(el => el.remove());
             items.length = 0;
             
             let isNewBest = saveHighScore('gold', score);
-            document.getElementById('msg').innerHTML = `時間到！總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            document.getElementById('msg').innerHTML = `遊戲結束！達到 <b>LEVEL ${level}</b>，總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
             document.getElementById('config-box').style.display = 'block';
         }
     </script>

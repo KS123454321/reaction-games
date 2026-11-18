@@ -51,3 +51,28 @@ function exitToHome(isPlaying = false) {
         window.location.href = "index.html";
     }
 }
+
+// 初始化主題（網頁載入時檢查玩家上一次的選擇）
+function initTheme() {
+    const savedTheme = localStorage.getItem('site_theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+}
+
+// 切換主題並儲存
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    if (currentTheme === 'dark') {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('site_theme', 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('site_theme', 'dark');
+    }
+}
+
+// 每次網頁打開時自動執行主題套用
+window.addEventListener('DOMContentLoaded', initTheme);
