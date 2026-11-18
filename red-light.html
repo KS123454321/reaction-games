@@ -3,119 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>123 木頭人 - 反應遊樂園</title>
+    <title>123 木頭人 - 飛碟大逃亡</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .game-container { text-align: center; max-width: 500px; margin: 0 auto; }
-        .light-box { font-size: 5rem; margin: 20px 0; }
-        .track { background: #E0E0E0; border-radius: 20px; height: 40px; position: relative; margin: 20px 0; overflow: hidden; }
-        .player { width: 40px; height: 40px; background: #FF5722; border-radius: 50%; position: absolute; left: 0; transition: left 0.1s linear; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .game-container { text-align: center; max-width: 550px; margin: 0 auto; }
+        
+        .status-bar {
+            display: flex; justify-content: space-around;
+            background: #FFF3CD !important; color: #2C3E50 !important;
+            padding: 10px; border-radius: 14px; font-size: 1.2rem; font-weight: bold;
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .light-panel {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            height: 115px;
+        }
+        .light-icon { font-size: 4rem; line-height: 1; min-width: 70px; text-align: center; }
+        .light-info { text-align: left; flex: 1; }
+        .light-text { font-size: 1.5rem; font-weight: bold; }
+
+        .scene {
+            width: 100%; height: 180px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 70%, #8BC34A 70%, #689F38 100%);
+            border-radius: 20px; position: relative; overflow: hidden;
+            margin: 15px 0; box-shadow: inset 0 0 15px rgba(0,0,0,0.15);
+            border: 3px solid var(--card-bg);
+        }
+        [data-theme="dark"] .scene {
+            background: linear-gradient(to bottom, #0F2027 0%, #203A43 70%, #2C5364 70%, #1B3B2B 100%);
+        }
+
+        .ufo {
+            position: absolute; top: 18px; left: 0%;
+            font-size: 2.8rem; transition: left 0.1s linear;
+            z-index: 3; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+        .ufo-beam {
+            position: absolute; top: 45px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 115px solid rgba(255, 235, 59, 0.55);
+            display: none; z-index: 2;
+        }
+
+        .finish-line {
+            position: absolute; right: 12%; bottom: 12px;
+            font-size: 2.5rem; z-index: 1;
+        }
+        .player {
+            position: absolute; bottom: 12px; left: 5%;
+            font-size: 2.6rem; transition: left 0.08s linear, bottom 0.5s ease-in;
+            z-index: 4;
+            transform: scaleX(-1);
+        }
+
+        .hold-btn {
+            width: 100%; padding: 24px; font-size: 1.7rem; font-weight: bold;
+            background: #27AE60; color: white; border: none; border-radius: 24px;
+            box-shadow: 0 8px 0 #1E8449; cursor: pointer;
+            transition: transform 0.05s, background-color 0.2s;
+        }
+        .hold-btn:active, .hold-btn.pressing {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #1E8449;
+            background: #2ECC71;
+        }
     </style>
 </head>
 <body>
     <div class="top-nav">
         <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
-        <div class="score-display">距離：<span id="score">0</span> m</div>
+        <button class="btn-theme" onclick="toggleTheme()">🌓 切換模式</button>
+        <div class="score-display">總距離：<span id="total-score">0</span> m</div>
     </div>
     
     <div class="game-container">
-        <h2>🚦 123 木頭人</h2>
-        <p id="msg">按住下方「往前衝」按鈕前進，看到紅燈要立刻放開！</p>
+        <h2>🚦 123 木頭人：飛碟大逃亡</h2>
         
-        <div class="light-box" id="light-icon">🟢</div>
-        
-        <div class="track">
+        <div class="status-bar">
+            <div>🔥 關卡：<span id="level">1</span></div>
+            <div>🏁 本關進度：<span id="stage-dist">0</span> / 100 m</div>
+        </div>
+
+        <div class="light-panel">
+            <div class="light-icon" id="light-icon">🟢</div>
+            <div class="light-info">
+                <div class="light-text" id="light-status" style="color: #27AE60;">準備起跑</div>
+                <div style="font-size: 0.95rem; opacity: 0.8;" id="sub-msg">按住按鈕前進，紅燈停下！別被飛碟抓走！</div>
+            </div>
+        </div>
+
+        <div class="scene" id="scene">
+            <div class="ufo" id="ufo">🛸<div class="ufo-beam" id="ufo-beam"></div></div>
+            <div class="finish-line">🏁</div>
             <div class="player" id="player">🏃</div>
         </div>
         
-        <div id="config-box" style="margin: 20px 0;">
-            <button class="btn-big" onclick="startGame()">開始遊戲 ▶</button>
+        <div id="config-box" style="margin: 15px 0;">
+            <button class="btn-big" onclick="startGame()">開始挑戰 ▶</button>
+            <div style="margin-top: 8px; font-size: 0.95rem; opacity: 0.75;">💡 提示：橘燈急煞成功可獲得 +10m 衝刺獎勵！電腦版也可按住「空白鍵」</div>
         </div>
 
-        <div id="control-box" style="display:none;">
-            <button class="btn-big" id="hold-btn" style="width: 100%; background: #3498DB; box-shadow: 0 6px 0 #2980B9;" 
-                onmousedown="startMoving()" onmouseup="stopMoving()" 
-                ontouchstart="startMoving()" ontouchend="stopMoving()">
-                👉 按住不放往前衝
-            </button>
+        <div id="control-box" style="display:none; margin-top: 15px;">
+            <button class="hold-btn" id="hold-btn">👉 按住不放往前衝</button>
         </div>
     </div>
 
     <script src="common.js"></script>
     <script>
-        let score = 0, isStarted = false, isGreen = true, isMoving = false, moveInterval = null, lightTimer = null, playerPos = 0;
+        let isStarted = false;
+        let level = 1;
+        let totalDistance = 0;   
+        let stageProgress = 0;   
+        let ufoProgress = -12;   
         
+        let lightState = 'green'; 
+        let isMoving = false;
+        let ranDuringOrange = false; 
+
+        let gameLoop = null;
+        let lightTimer = null;
+
+        const holdBtn = document.getElementById('hold-btn');
+
+        holdBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startMoving(); });
+        holdBtn.addEventListener('mouseup', stopMoving);
+        holdBtn.addEventListener('mouseleave', stopMoving);
+        holdBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startMoving(); });
+        holdBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopMoving(); });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && isStarted && !e.repeat) {
+                e.preventDefault();
+                startMoving();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && isStarted) {
+                e.preventDefault();
+                stopMoving();
+            }
+        });
+
         function startGame() {
-            score = 0; playerPos = 0; isStarted = true; isGreen = true;
-            document.getElementById('score').innerText = score;
-            document.getElementById('player').style.left = '0%';
+            clearInterval(gameLoop);
+            clearTimeout(lightTimer);
+            isMoving = false;
+            ranDuringOrange = false;
+
+            isStarted = true;
+            level = 1;
+            totalDistance = 0;
+            stageProgress = 0;
+            ufoProgress = -12;
+
+            document.getElementById('ufo-beam').style.display = 'none';
+            document.getElementById('player').style.bottom = '12px';
+            document.getElementById('player').innerText = '🏃';
             document.getElementById('config-box').style.display = 'none';
             document.getElementById('control-box').style.display = 'block';
-            document.getElementById('msg').innerText = '綠燈亮起！快往前衝！';
-            
-            scheduleLightChange();
+            holdBtn.classList.remove('pressing');
+
+            setLight('green');
+            updatePositions();
+
+            gameLoop = setInterval(updatePhysics, 50);
+            scheduleNextLight();
         }
 
-        function scheduleLightChange() {
+        function setLight(state) {
+            lightState = state;
+            const iconEl = document.getElementById('light-icon');
+            const statusEl = document.getElementById('light-status');
+            const subEl = document.getElementById('sub-msg');
+
+            if (state === 'green') {
+                iconEl.innerText = '🟢';
+                statusEl.innerText = '綠燈！快往前衝！';
+                statusEl.style.color = '#27AE60';
+                subEl.innerText = '飛碟在後面追來了，趕快前進！';
+                ranDuringOrange = false;
+            } else if (state === 'orange') {
+                iconEl.innerText = '🟠';
+                statusEl.innerText = '橘燈警告！準備煞車！';
+                statusEl.style.color = '#E67E22';
+                subEl.innerText = '還可以偷跑，但隨時會變紅燈！';
+            } else if (state === 'red') {
+                iconEl.innerText = '🔴';
+                statusEl.innerText = '紅燈！不許動！';
+                statusEl.style.color = '#E74C3C';
+                subEl.innerText = '千萬別按按鈕！';
+            }
+        }
+
+        function scheduleNextLight() {
             if (!isStarted) return;
-            let waitTime = Math.random() * 2000 + 1500;
-            lightTimer = setTimeout(() => {
-                isGreen = !isGreen;
-                document.getElementById('light-icon').innerText = isGreen ? '🟢' : '🔴';
-                document.getElementById('msg').innerText = isGreen ? '綠燈！前進！' : '紅燈！停！';
-                
-                if (!isGreen && isMoving) {
-                    // 紅燈還在移動 -> 犯規！
-                    failGame();
-                } else {
-                    scheduleLightChange();
-                }
-            }, waitTime);
+            clearTimeout(lightTimer);
+
+            // 💡 調整節奏：縮短綠燈與紅燈停留時間，讓變換更頻繁刺激
+            if (lightState === 'green') {
+                const greenDuration = Math.max(600, (1800 - level * 150) + Math.random() * 800);
+                lightTimer = setTimeout(() => {
+                    if (!isStarted) return;
+                    setLight('orange');
+                    scheduleNextLight();
+                }, greenDuration);
+
+            } else if (lightState === 'orange') {
+                const orangeDuration = Math.max(350, 1000 - (level - 1) * 100);
+                lightTimer = setTimeout(() => {
+                    if (!isStarted) return;
+                    setLight('red');
+                    if (isMoving) {
+                        gameOver('red_light');
+                        return;
+                    }
+                    scheduleNextLight();
+                }, orangeDuration);
+
+            } else if (lightState === 'red') {
+                const redDuration = Math.min(2200, 900 + (level - 1) * 120 + Math.random() * 500);
+                lightTimer = setTimeout(() => {
+                    if (!isStarted) return;
+                    setLight('green');
+                    scheduleNextLight();
+                }, redDuration);
+            }
         }
 
         function startMoving() {
-            if (!isStarted || isMoving) return;
+            if (!isStarted) return;
+            if (lightState === 'red') {
+                gameOver('red_light');
+                return;
+            }
             isMoving = true;
-            moveInterval = setInterval(() => {
-                if (!isGreen) {
-                    failGame();
-                    return;
-                }
-                playerPos += 1.5;
-                if (playerPos >= 85) {
-                    winGame();
-                    return;
-                }
-                document.getElementById('player').style.left = playerPos + '%';
-                score = Math.floor(playerPos);
-                document.getElementById('score').innerText = score;
-            }, 50);
+            holdBtn.classList.add('pressing');
         }
 
         function stopMoving() {
+            if (!isStarted) return;
+            if (isMoving && lightState === 'orange' && ranDuringOrange) {
+                ranDuringOrange = false;
+                stageProgress += 6;
+                totalDistance += 6;
+                playSound('good');
+                document.getElementById('sub-msg').innerText = '⚡ 極限急煞成功！獎勵 +6m！';
+                checkLevelUp();
+            }
             isMoving = false;
-            clearInterval(moveInterval);
+            holdBtn.classList.remove('pressing');
         }
 
-        function failGame() {
-            stopMoving();
+        function updatePhysics() {
+            if (!isStarted) return;
+
+            // 飛碟追擊速度
+            const ufoSpeed = 0.22 + (level - 1) * 0.04;
+            ufoProgress += ufoSpeed;
+
+            if (isMoving) {
+                if (lightState === 'red') {
+                    gameOver('red_light');
+                    return;
+                }
+                if (lightState === 'orange') {
+                    ranDuringOrange = true;
+                }
+
+                // 💡 調整玩家速度：每 50ms 走 0.45m，跑完 100m 約需 11 秒（符合人類真實反應與緊張感）
+                const playerSpeed = 0.45;
+                stageProgress += playerSpeed;
+                totalDistance += playerSpeed;
+
+                if (checkLevelUp()) return;
+            }
+
+            if (ufoProgress >= stageProgress - 2) {
+                gameOver('ufo');
+                return;
+            }
+
+            updatePositions();
+        }
+
+        function checkLevelUp() {
+            if (stageProgress >= 100) {
+                level++;
+                stageProgress = 0;
+                ufoProgress = -12; 
+                playSound('good');
+                
+                // 💡 關鍵修正：過關瞬間只強制綠燈 1 秒鐘，然後就讓燈號自動恢復正常循環變換！
+                setLight('green');
+                clearTimeout(lightTimer);
+                lightTimer = setTimeout(() => {
+                    if (isStarted) scheduleNextLight();
+                }, 1000);
+
+                document.getElementById('sub-msg').innerText = `🎉 突破 100m！晉級 LEVEL ${level}！`;
+                updatePositions();
+                return true;
+            }
+            return false;
+        }
+
+        function updatePositions() {
+            document.getElementById('level').innerText = level;
+            document.getElementById('stage-dist').innerText = Math.min(100, Math.floor(stageProgress));
+            document.getElementById('total-score').innerText = Math.floor(totalDistance);
+
+            const visualPlayerLeft = 5 + (Math.min(100, stageProgress) * 0.77);
+            const visualUfoLeft = 5 + (ufoProgress * 0.77);
+
+            document.getElementById('player').style.left = visualPlayerLeft + '%';
+            document.getElementById('ufo').style.left = visualUfoLeft + '%';
+        }
+
+        function gameOver(reason) {
             isStarted = false;
+            isMoving = false;
+            clearInterval(gameLoop);
             clearTimeout(lightTimer);
+            holdBtn.classList.remove('pressing');
+            document.getElementById('control-box').style.display = 'none';
             playSound('bad');
-            document.getElementById('control-box').style.display = 'none';
-            let isNewBest = saveHighScore('light', score);
-            document.getElementById('msg').innerHTML = `💥 紅燈移動被抓到了！總得分：<b>${score}</b> m ${isNewBest ? '🎉 創新紀錄！' : ''}`;
-            document.getElementById('config-box').style.display = 'block';
-        }
 
-        function winGame() {
-            stopMoving();
-            isStarted = false;
-            clearTimeout(lightTimer);
-            playSound('good');
-            document.getElementById('control-box').style.display = 'none';
-            let isNewBest = saveHighScore('light', 100);
-            document.getElementById('msg').innerHTML = `🏆 成功抵達終點！總得分：<b>100</b> m ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            const finalScore = Math.floor(totalDistance);
+            const isNewBest = saveHighScore('light', finalScore);
+            const statusEl = document.getElementById('light-status');
+            const subEl = document.getElementById('sub-msg');
+
+            if (reason === 'ufo') {
+                document.getElementById('ufo').style.left = document.getElementById('player').style.left;
+                document.getElementById('ufo-beam').style.display = 'block';
+                document.getElementById('player').style.bottom = '115px';
+                document.getElementById('player').innerText = '😱';
+
+                statusEl.innerText = '🛸 被飛碟抓走了！';
+                statusEl.style.color = '#9B59B6';
+                subEl.innerHTML = `跑太慢被外星人綁架啦！總成績：<b>${finalScore} m</b> (LEVEL ${level}) ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            } else {
+                document.getElementById('player').innerText = '💥';
+                statusEl.innerText = '🚨 紅燈移動被抓到了！';
+                statusEl.style.color = '#E74C3C';
+                subEl.innerHTML = `煞車不及違規！總成績：<b>${finalScore} m</b> (LEVEL ${level}) ${isNewBest ? '🎉 創新紀錄！' : ''}`;
+            }
+
             document.getElementById('config-box').style.display = 'block';
         }
     </script>
