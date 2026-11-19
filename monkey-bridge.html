@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>猴子架橋過河 - 手機雙擊放置版</title>
+    <title>猴子架橋過河 - 滑動跟隨與雙塊預覽版</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .game-container { text-align: center; max-width: 600px; margin: 0 auto; }
-        
+        .game-container { text-align: center; max-width: 620px; margin: 0 auto; }
+
         .status-bar {
             display: flex; justify-content: space-around;
             background: #FFF3CD !important; color: #2C3E50 !important;
@@ -31,7 +31,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-around;
-            width: 48px;
+            width: 46px;
             min-height: 260px;
             background: linear-gradient(135deg, #689F38, #8BC34A);
             border-radius: 12px;
@@ -44,13 +44,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            font-size: 1.7rem;
             position: relative;
         }
         .bank-slot.active-start, .bank-slot.active-end {
-            background: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.45);
             border-radius: 8px;
-            box-shadow: 0 0 6px rgba(255,255,255,0.8);
+            box-shadow: 0 0 8px rgba(255,255,255,0.9);
         }
 
         .river-grid {
@@ -60,6 +60,8 @@
             padding: 6px;
             border-radius: 12px;
             box-shadow: inset 0 0 15px rgba(0,0,0,0.25);
+            touch-action: none; /* 手機滑動時防止整頁捲動 */
+            user-select: none;
         }
         [data-theme="dark"] .river-grid {
             background: #01579B;
@@ -73,14 +75,51 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            font-size: 1.7rem;
             cursor: pointer;
-            transition: background-color 0.15s, transform 0.1s;
+            transition: background-color 0.1s, transform 0.1s;
             position: relative;
-            -webkit-tap-highlight-color: transparent; /* 消除手機點擊高亮方塊 */
+            -webkit-tap-highlight-color: transparent;
         }
         [data-theme="dark"] .cell {
             background: #0277BD;
+        }
+
+        /* 入口與出口格子特別標示 */
+        .cell.entry-cell {
+            box-shadow: inset 0 0 0 3px #AEEA00, 0 0 8px rgba(174, 234, 0, 0.75);
+        }
+        .cell.entry-cell::after {
+            content: "IN";
+            position: absolute;
+            bottom: 1px;
+            right: 2px;
+            font-size: 0.62rem;
+            font-weight: 900;
+            color: #1B5E20;
+            background: rgba(238, 255, 65, 0.9);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 1.1;
+            pointer-events: none;
+        }
+
+        .cell.exit-cell {
+            box-shadow: inset 0 0 0 3px #FFD600, 0 0 8px rgba(255, 214, 0, 0.8);
+        }
+        .cell.exit-cell::after {
+            content: "OUT";
+            position: absolute;
+            bottom: 1px;
+            right: 2px;
+            font-size: 0.62rem;
+            font-weight: 900;
+            color: #BF360C;
+            background: rgba(255, 245, 157, 0.95);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 1.1;
+            pointer-events: none;
         }
 
         .cell.island {
@@ -95,57 +134,87 @@
         }
 
         .cell.preview-valid {
-            background: rgba(139, 195, 74, 0.85) !important;
+            background: rgba(139, 195, 74, 0.88) !important;
             border: 2px dashed #FFF;
         }
         .cell.preview-invalid {
-            background: rgba(231, 76, 60, 0.75) !important;
+            background: rgba(231, 76, 60, 0.78) !important;
             border: 2px dashed #FFF;
         }
 
+        /* 底部方塊展示與操作區 */
         .dock-area {
             background: var(--card-bg);
             padding: 15px;
             border-radius: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pieces-row {
+            display: flex;
             align-items: center;
             justify-content: space-around;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 14px;
+        }
+
+        .piece-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .piece-label {
+            font-size: 0.92rem;
+            font-weight: bold;
+            margin-bottom: 6px;
         }
 
         .piece-preview {
             display: grid;
-            grid-template-columns: repeat(4, 28px);
-            grid-template-rows: repeat(4, 28px);
+            grid-template-columns: repeat(4, 24px);
+            grid-template-rows: repeat(4, 24px);
             gap: 2px;
-            background: rgba(0,0,0,0.05);
-            padding: 8px;
-            border-radius: 12px;
+            background: rgba(0,0,0,0.06);
+            padding: 6px;
+            border-radius: 10px;
+        }
+        .piece-preview.next-box {
+            opacity: 0.85;
+            transform: scale(0.92);
         }
         .p-cell {
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             border-radius: 4px;
         }
         .p-cell.active {
             background: #8BC34A;
             box-shadow: 0 2px 0 #558B2F;
         }
+        .p-cell.next-active {
+            background: #66BB6A;
+            box-shadow: 0 2px 0 #388E3C;
+        }
+        .p-cell.fail-active {
+            background: #E74C3C;
+            box-shadow: 0 2px 0 #922B21;
+        }
 
         .action-btns {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .btn-rotate {
             background: #FF9F1C;
             color: white;
             border: none;
-            padding: 12px 22px;
-            font-size: 1.2rem;
+            padding: 11px 20px;
+            font-size: 1.15rem;
             font-weight: bold;
             border-radius: 14px;
             cursor: pointer;
@@ -157,14 +226,39 @@
             background: #7F8C8D;
             color: white;
             border: none;
-            padding: 10px 18px;
-            font-size: 1.05rem;
+            padding: 9px 16px;
+            font-size: 1rem;
             font-weight: bold;
             border-radius: 14px;
             cursor: pointer;
             box-shadow: 0 4px 0 #566573;
         }
         .btn-reroll:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .confirm-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.98rem;
+            font-weight: bold;
+            padding-top: 6px;
+            border-top: 1px solid rgba(128,128,128,0.2);
+            cursor: pointer;
+            user-select: none;
+        }
+        .confirm-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .fail-piece-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px auto 15px;
+        }
     </style>
 </head>
 <body>
@@ -175,15 +269,15 @@
     </div>
 
     <div class="game-container">
-        <h2>🐒 猴子架橋過河 (手機雙擊版)</h2>
+        <h2>🐒 猴子架橋過河</h2>
 
         <div class="status-bar">
             <div>🌊 關卡：<span id="level">1</span></div>
             <div>🧱 已用島嶼：<span id="blocks-used">0</span> 塊</div>
         </div>
 
-        <div style="margin-bottom: 10px; font-size: 1.05rem; font-weight: bold;" id="msg-bar">
-            點擊格子預覽位置，再點一次確認放置！
+        <div style="margin-bottom: 10px; font-size: 1.02rem; font-weight: bold;" id="msg-bar">
+            電腦：移動游標、點左鍵落下 ｜ 手機：滑動移動、放開落下
         </div>
 
         <div class="river-wrapper">
@@ -193,19 +287,34 @@
         </div>
 
         <div class="dock-area" id="dock-area">
-            <div>
-                <div style="font-size: 0.95rem; font-weight: bold; margin-bottom: 6px;">下一個島嶼方塊：</div>
-                <div class="piece-preview" id="piece-preview"></div>
+            <div class="pieces-row">
+                <div class="piece-box">
+                    <div class="piece-label">🎯 這次方塊</div>
+                    <div class="piece-preview" id="current-piece-preview"></div>
+                </div>
+                <div class="piece-box">
+                    <div class="piece-label">⏭️ 下次方塊</div>
+                    <div class="piece-preview next-box" id="next-piece-preview"></div>
+                </div>
+                <div class="action-btns">
+                    <button class="btn-rotate" onclick="rotatePiece()">🔄 旋轉方塊 (R)</button>
+                    <button class="btn-reroll" id="reroll-btn" onclick="rerollPiece()">🎲 重抽這次 (<span id="reroll-count">2</span>)</button>
+                </div>
             </div>
-            <div class="action-btns">
-                <button class="btn-rotate" onclick="rotatePiece()">🔄 旋轉方塊 (R)</button>
-                <button class="btn-reroll" id="reroll-btn" onclick="rerollPiece()">🎲 重抽方塊 (<span id="reroll-count">2</span>)</button>
-            </div>
+
+            <label class="confirm-option">
+                <input type="checkbox" id="confirm-checkbox">
+                <span>落下方塊前跳出確認視窗</span>
+            </label>
         </div>
 
         <div id="gameover-box" style="display:none; margin-top: 15px; background: var(--card-bg); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-            <h3 style="color: #E74C3C; margin-bottom: 10px;">💥 遊戲結束！河道已經無路可走！</h3>
-            <p id="gameover-desc" style="font-size: 1.1rem; margin-bottom: 15px;"></p>
+            <h3 style="color: #E74C3C; margin-bottom: 8px;">💥 遊戲結束！這個方塊放不進去！</h3>
+            <p id="gameover-desc" style="font-size: 1.05rem; margin-bottom: 8px;"></p>
+            <div class="fail-piece-wrap">
+                <div style="font-size: 0.95rem; font-weight: bold; color: #E74C3C; margin-bottom: 6px;">卡住的方塊：</div>
+                <div class="piece-preview" id="fail-piece-preview"></div>
+            </div>
             <button class="btn-big" onclick="restartGame()">重新挑戰 ▶</button>
         </div>
     </div>
@@ -219,37 +328,54 @@
         let blocksUsed = 0;
         let rerollsLeft = 2;
         let gridSize = 5;
-        let grid = []; 
+        let grid = [];
         let currentPiece = [];
-        let selectedPos = null; // 儲存玩家點擊預覽中的座標
+        let nextPiece = [];
+        let previewPos = null;
         let isAnimating = false;
+        let isConfirmingDrop = false;
 
         let startRow = 0;
         let endRow = 0;
 
         const SHAPES = [
-            [[0,0], [0,1], [0,2]],               
-            [[0,0], [1,0], [1,1]],               
-            [[0,0], [0,1], [1,1], [1,2]],        
-            [[0,1], [1,0], [1,1], [1,2]],        
-            [[0,0], [1,0], [2,0], [2,1]],        
-            [[0,1], [1,0], [1,1], [1,2], [2,1]], 
-            [[0,0], [0,1], [1,0], [1,1]],        
-            [[0,0], [0,1]]                       
+            [[0,0], [0,1], [0,2]],
+            [[0,0], [1,0], [1,1]],
+            [[0,0], [0,1], [1,1], [1,2]],
+            [[0,1], [1,0], [1,1], [1,2]],
+            [[0,0], [1,0], [2,0], [2,1]],
+            [[0,1], [1,0], [1,1], [1,2], [2,1]],
+            [[0,0], [0,1], [1,0], [1,1]],
+            [[0,0], [0,1]]
         ];
 
         window.addEventListener('keydown', (e) => {
-            if ((e.key === 'r' || e.key === 'R') && isStarted && !isAnimating && !isGameOver) {
+            if ((e.key === 'r' || e.key === 'R') && isStarted && !isAnimating && !isGameOver && !isConfirmingDrop) {
                 rotatePiece();
             }
         });
+
+        function createRandomPiece() {
+            const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            let piece = shape.map(pt => [...pt]);
+            const randomRots = Math.floor(Math.random() * 4);
+            for (let i = 0; i < randomRots; i++) {
+                piece = rotateShapeData(piece);
+            }
+            return piece;
+        }
+
+        function rotateShapeData(piece) {
+            const rotated = piece.map(([r, c]) => [c, -r]);
+            const minR = Math.min(...rotated.map(p => p[0]));
+            const minC = Math.min(...rotated.map(p => p[1]));
+            return rotated.map(([r, c]) => [r - minR, c - minC]);
+        }
 
         function startGame() {
             level = 1;
             clearedCount = 0;
             document.getElementById('score').innerText = clearedCount;
-            document.getElementById('gameover-box').style.display = 'none';
-            document.getElementById('dock-area').style.display = 'flex';
             initLevel();
         }
 
@@ -261,9 +387,10 @@
             isStarted = true;
             isGameOver = false;
             isAnimating = false;
+            isConfirmingDrop = false;
             blocksUsed = 0;
             rerollsLeft = 2;
-            selectedPos = null;
+            previewPos = null;
 
             document.getElementById('gameover-box').style.display = 'none';
             document.getElementById('dock-area').style.display = 'flex';
@@ -290,11 +417,13 @@
             document.getElementById('reroll-btn').disabled = false;
             document.getElementById('msg-bar').innerText = `請從左側 🐒 (第${startRow+1}行) 連到右側 🍌 (第${endRow+1}行)！`;
 
-            spawnNextPiece();
-            if (!hasAnyValidMove()) {
-                spawnNextPiece();
+            currentPiece = createRandomPiece();
+            nextPiece = createRandomPiece();
+            if (!hasAnyValidMove(currentPiece)) {
+                currentPiece = createRandomPiece();
             }
 
+            renderPiecesPreview();
             renderGrid();
         }
 
@@ -323,59 +452,56 @@
             }
         }
 
-        function spawnNextPiece() {
-            const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-            currentPiece = shape.map(pt => [...pt]);
-            const randomRots = Math.floor(Math.random() * 4);
-            for (let i = 0; i < randomRots; i++) rotatePieceData();
-            renderPiecePreview();
-        }
-
-        function rotatePieceData() {
-            const rotated = currentPiece.map(([r, c]) => [c, -r]);
-            const minR = Math.min(...rotated.map(p => p[0]));
-            const minC = Math.min(...rotated.map(p => p[1]));
-            currentPiece = rotated.map(([r, c]) => [r - minR, c - minC]);
+        function advancePieceQueue() {
+            currentPiece = nextPiece.map(pt => [...pt]);
+            nextPiece = createRandomPiece();
+            renderPiecesPreview();
         }
 
         function rotatePiece() {
-            if (isAnimating || isGameOver) return;
-            rotatePieceData();
-            renderPiecePreview();
-            renderGrid();
+            if (isAnimating || isGameOver || isConfirmingDrop) return;
+            currentPiece = rotateShapeData(currentPiece);
+            renderPiecesPreview();
+            updatePreviewHighlight();
         }
 
         function rerollPiece() {
-            if (rerollsLeft <= 0 || isAnimating || isGameOver) return;
+            if (rerollsLeft <= 0 || isAnimating || isGameOver || isConfirmingDrop) return;
             rerollsLeft--;
-            selectedPos = null;
             document.getElementById('reroll-count').innerText = rerollsLeft;
             if (rerollsLeft === 0) document.getElementById('reroll-btn').disabled = true;
-            spawnNextPiece();
-            renderGrid();
 
-            if (!hasAnyValidMove() && rerollsLeft === 0) {
-                triggerGameOver("新抽出的方塊無處可放，河道死局！");
+            currentPiece = createRandomPiece();
+            renderPiecesPreview();
+            updatePreviewHighlight();
+
+            if (!hasAnyValidMove(currentPiece) && rerollsLeft === 0) {
+                triggerGameOver("重抽後這個方塊仍無處可放，河道死局！", currentPiece);
             }
         }
 
-        function renderPiecePreview() {
-            const box = document.getElementById('piece-preview');
+        function renderPieceMatrix(containerId, piece, activeClass) {
+            const box = document.getElementById(containerId);
             box.innerHTML = '';
             for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
                     const div = document.createElement('div');
                     div.className = 'p-cell';
-                    if (currentPiece.some(p => p[0] === r && p[1] === c)) {
-                        div.classList.add('active');
+                    if (piece.some(p => p[0] === r && p[1] === c)) {
+                        div.classList.add(activeClass);
                     }
                     box.appendChild(div);
                 }
             }
         }
 
-        function canPlace(baseR, baseC) {
-            return currentPiece.every(([dr, dc]) => {
+        function renderPiecesPreview() {
+            renderPieceMatrix('current-piece-preview', currentPiece, 'active');
+            renderPieceMatrix('next-piece-preview', nextPiece, 'next-active');
+        }
+
+        function canPlace(baseR, baseC, piece = currentPiece) {
+            return piece.every(([dr, dc]) => {
                 const nr = baseR + dr;
                 const nc = baseC + dc;
                 return nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && grid[nr][nc] === 0;
@@ -387,13 +513,6 @@
             gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
             gridEl.innerHTML = '';
 
-            let previewCells = [];
-            let validPreview = false;
-            if (selectedPos && !isAnimating && !isGameOver) {
-                validPreview = canPlace(selectedPos.r, selectedPos.c);
-                previewCells = currentPiece.map(([dr, dc]) => [selectedPos.r + dr, selectedPos.c + dc]);
-            }
-
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
                     const cell = document.createElement('div');
@@ -401,55 +520,136 @@
                     cell.dataset.r = r;
                     cell.dataset.c = c;
 
+                    // 入口與出口格子特別標示
+                    if (r === startRow && c === 0) cell.classList.add('entry-cell');
+                    if (r === endRow && c === gridSize - 1) cell.classList.add('exit-cell');
+
                     if (grid[r][c] === 1) cell.classList.add('island');
                     if (grid[r][c] === 2) {
                         cell.classList.add('rock');
                         cell.innerText = '🪨';
                     }
 
-                    if (previewCells.some(p => p[0] === r && p[1] === c)) {
-                        cell.classList.add(validPreview ? 'preview-valid' : 'preview-invalid');
-                    }
-
-                    // 💡 手機與電腦通用的點擊互動：
-                    // 第一次點擊：選定位置並顯示預覽
-                    // 第二次點擊同一個合法位置：直接確認放置方塊！
-                    cell.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (isAnimating || isGameOver) return;
-
-                        if (selectedPos && selectedPos.r === r && selectedPos.c === c && validPreview) {
-                            // 第二次點擊：確認放置
-                            placePiece(r, c);
-                        } else {
-                            // 第一次點擊：顯示該處的預覽
-                            selectedPos = { r, c };
-                            renderGrid();
-                            document.getElementById('msg-bar').innerText = validPreview ? 
-                                '👉 位置合適！再點一次該格子即可確認放置。' : 
-                                '⚠️ 這裡放不下！請點選其他位置或旋轉方塊。';
-                        }
-                    });
-
                     gridEl.appendChild(cell);
                 }
             }
+
+            // 電腦滑鼠移動跟隨預覽與左鍵點擊落下
+            gridEl.onmousemove = (e) => {
+                if (isAnimating || isGameOver || isConfirmingDrop) return;
+                const target = e.target.closest('.cell');
+                if (!target) return;
+                const r = parseInt(target.dataset.r, 10);
+                const c = parseInt(target.dataset.c, 10);
+                if (!previewPos || previewPos.r !== r || previewPos.c !== c) {
+                    previewPos = { r, c };
+                    updatePreviewHighlight();
+                }
+            };
+
+            gridEl.onmouseleave = () => {
+                if (isConfirmingDrop) return;
+                previewPos = null;
+                updatePreviewHighlight();
+            };
+
+            gridEl.onclick = (e) => {
+                if (e.button !== 0) return; // 僅限滑鼠左鍵
+                if (isAnimating || isGameOver || isConfirmingDrop) return;
+                const target = e.target.closest('.cell');
+                if (!target) return;
+                const r = parseInt(target.dataset.r, 10);
+                const c = parseInt(target.dataset.c, 10);
+                previewPos = { r, c };
+                updatePreviewHighlight();
+                attemptDropPiece(r, c);
+            };
+
+            // 手機觸控：滑動移動方塊，手指放開螢幕就落下方塊
+            gridEl.ontouchstart = (e) => {
+                if (isAnimating || isGameOver || isConfirmingDrop) return;
+                const touch = e.touches[0];
+                const pos = getCellPosFromPoint(touch.clientX, touch.clientY);
+                if (pos) {
+                    previewPos = pos;
+                    updatePreviewHighlight();
+                }
+            };
+
+            gridEl.ontouchmove = (e) => {
+                if (isAnimating || isGameOver || isConfirmingDrop) return;
+                const touch = e.touches[0];
+                const pos = getCellPosFromPoint(touch.clientX, touch.clientY);
+                if (pos && (!previewPos || previewPos.r !== pos.r || previewPos.c !== pos.c)) {
+                    previewPos = pos;
+                    updatePreviewHighlight();
+                }
+            };
+
+            gridEl.ontouchend = (e) => {
+                if (isAnimating || isGameOver || isConfirmingDrop) return;
+                if (!previewPos) return;
+                const { r, c } = previewPos;
+                attemptDropPiece(r, c);
+            };
+
+            updatePreviewHighlight();
         }
 
-        function placePiece(baseR, baseC) {
-            if (isAnimating || isGameOver) return;
+        function getCellPosFromPoint(clientX, clientY) {
+            const el = document.elementFromPoint(clientX, clientY);
+            if (!el) return null;
+            const cell = el.closest('.cell');
+            if (!cell) return null;
+            return {
+                r: parseInt(cell.dataset.r, 10),
+                c: parseInt(cell.dataset.c, 10)
+            };
+        }
 
+        function updatePreviewHighlight() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => cell.classList.remove('preview-valid', 'preview-invalid'));
+
+            if (!previewPos || isAnimating || isGameOver) return;
+            const valid = canPlace(previewPos.r, previewPos.c);
+            const cls = valid ? 'preview-valid' : 'preview-invalid';
+
+            currentPiece.forEach(([dr, dc]) => {
+                const nr = previewPos.r + dr;
+                const nc = previewPos.c + dc;
+                const target = document.querySelector(`.cell[data-r="${nr}"][data-c="${nc}"]`);
+                if (target) target.classList.add(cls);
+            });
+        }
+
+        function attemptDropPiece(baseR, baseC) {
             if (!canPlace(baseR, baseC)) {
                 playSound('bad');
-                document.getElementById('msg-bar').innerText = '⚠️ 這裡放不下或超出邊界！';
+                document.getElementById('msg-bar').innerText = '⚠️ 這裡放不下或超出邊界！請換位置或旋轉方塊。';
                 return;
             }
 
+            const needConfirm = document.getElementById('confirm-checkbox').checked;
+            if (needConfirm) {
+                isConfirmingDrop = true;
+                const ok = window.confirm(`確定要將方塊放在第 ${baseR + 1} 列、第 ${baseC + 1} 欄的位置嗎？`);
+                isConfirmingDrop = false;
+                if (!ok) {
+                    document.getElementById('msg-bar').innerText = '已取消放置，請重新選擇位置。';
+                    return;
+                }
+            }
+
+            placePiece(baseR, baseC);
+        }
+
+        function placePiece(baseR, baseC) {
             currentPiece.forEach(([dr, dc]) => {
                 grid[baseR + dr][baseC + dc] = 1;
             });
             blocksUsed++;
-            selectedPos = null; // 重置選取狀態
+            previewPos = null;
             document.getElementById('blocks-used').innerText = blocksUsed;
             playSound('good');
 
@@ -458,11 +658,11 @@
                 renderGrid();
                 animateMonkeyCross(path);
             } else {
-                spawnNextPiece();
+                advancePieceQueue();
                 renderGrid();
 
-                if (!hasAnyValidMove()) {
-                    triggerGameOver("方塊再也放不進河道了，空間已被卡死！");
+                if (!hasAnyValidMove(currentPiece)) {
+                    triggerGameOver("河道空間不足，這個方塊已經放不進去了！", currentPiece);
                 }
             }
         }
@@ -491,44 +691,40 @@
             return null;
         }
 
-        function hasAnyValidMove() {
-            let testPiece = currentPiece.map(p => [...p]);
+        function hasAnyValidMove(piece) {
+            let testPiece = piece.map(p => [...p]);
             for (let rot = 0; rot < 4; rot++) {
                 for (let r = 0; r < gridSize; r++) {
                     for (let c = 0; c < gridSize; c++) {
-                        const ok = testPiece.every(([dr, dc]) => {
-                            const nr = r + dr, nc = c + dc;
-                            return nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && grid[nr][nc] === 0;
-                        });
-                        if (ok) return true;
+                        if (canPlace(r, c, testPiece)) return true;
                     }
                 }
-                const rotated = testPiece.map(([r, c]) => [c, -r]);
-                const minR = Math.min(...rotated.map(p => p[0]));
-                const minC = Math.min(...rotated.map(p => p[1]));
-                testPiece = rotated.map(([r, c]) => [r - minR, c - minC]);
+                testPiece = rotateShapeData(testPiece);
             }
             return false;
         }
 
-        function triggerGameOver(reason) {
+        function triggerGameOver(reason, failedPiece) {
             isGameOver = true;
+            previewPos = null;
+            updatePreviewHighlight();
             playSound('bad');
+
             const isNewBest = saveHighScore('monkey', clearedCount);
-            
             document.getElementById('msg-bar').innerText = '💥 遊戲結束！';
             document.getElementById('dock-area').style.display = 'none';
             document.getElementById('gameover-box').style.display = 'block';
             document.getElementById('gameover-desc').innerHTML = `
                 ${reason}<br>
-                總共突破關卡：<b>${clearedCount}</b> 關<br>
-                ${isNewBest ? '🎉 <span style="color: #27AE60;">恭喜創下最高分紀錄！</span>' : ''}
+                總共突破關卡：<b>${clearedCount}</b> 關
+                ${isNewBest ? '<br>🎉 <span style="color: #27AE60;">恭喜創下最高分紀錄！</span>' : ''}
             `;
+            renderPieceMatrix('fail-piece-preview', failedPiece, 'fail-active');
         }
 
         function animateMonkeyCross(path) {
             isAnimating = true;
-            document.getElementById('msg-bar').innerText = '🎉 定點路線連通成功！小猴子過河囉！';
+            document.getElementById('msg-bar').innerText = '🎉 路線連通成功！小猴子過河囉！';
 
             let step = 0;
             const cells = document.querySelectorAll('.cell');
@@ -547,7 +743,7 @@
                     clearedCount++;
                     document.getElementById('score').innerText = clearedCount;
                     saveHighScore('monkey', clearedCount);
-                    document.getElementById('msg-bar').innerText = `🍌 成功抵達終點！準備進入第 ${level + 1} 關...`;
+                    document.getElementById('msg-bar').innerText = `🍌 吃到香蕉過關！準備進入第 ${level + 1} 關...`;
 
                     setTimeout(() => {
                         level++;
