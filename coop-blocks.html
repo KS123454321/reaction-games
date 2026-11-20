@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>合作方塊拼圖 - 全齡益智與反應遊樂園</title>
+    <title>🧱 合作方塊拼圖 - 全齡益智與反應遊樂園</title>
     <link rel="stylesheet" href="style.css">
     <script src="common.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
@@ -222,6 +222,16 @@
             font-weight: 700;
             cursor: pointer;
         }
+        .btn-amber {
+            background: #d97706;
+            color: #fff;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
         .btn-blue:disabled, .btn-green:disabled {
             opacity: 0.45;
             cursor: not-allowed;
@@ -249,6 +259,30 @@
             gap: 8px;
             box-sizing: border-box;
         }
+        .conn-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--bg-sub);
+            border: 1px solid var(--border-line);
+        }
+        .dot-circle {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+        .dot-circle.warn {
+            background: #f59e0b;
+        }
+        .dot-circle.err {
+            background: #ef4444;
+        }
+
         .status-pill {
             font-weight: 700;
             font-size: 0.92rem;
@@ -266,6 +300,21 @@
         }
         [data-theme="dark"] .status-pill.flash {
             color: #fbbf24;
+        }
+
+        /* 斷線提示條 */
+        .disconnect-banner {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.14);
+            border: 2px solid #ef4444;
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            box-sizing: border-box;
         }
 
         /* 棋盤上方精簡道具列（僅圖示＋數量） */
@@ -330,11 +379,13 @@
             border-radius: 16px;
             max-width: 100%;
             box-sizing: border-box;
+            position: relative;
         }
         .board {
             display: grid;
             gap: 2px;
             user-select: none;
+            position: relative;
         }
         .cell {
             width: var(--cell-size, 32px);
@@ -347,6 +398,7 @@
             justify-content: center;
             font-size: calc(var(--cell-size, 32px) * 0.52);
             box-sizing: border-box;
+            transition: transform 0.14s ease, filter 0.14s ease;
         }
         .cell.filled {
             border-color: rgba(255, 255, 255, 0.5);
@@ -371,6 +423,40 @@
             background-color: rgba(249, 115, 22, 0.45) !important;
             outline: 2.5px solid #ea580c;
             z-index: 3;
+        }
+        .cell.fx-clear {
+            background-color: #fde047 !important;
+            transform: scale(1.12);
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.9);
+            z-index: 4;
+        }
+        .cell.fx-bomb {
+            background-color: #fb7185 !important;
+            transform: scale(1.15);
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.95);
+            z-index: 4;
+        }
+
+        .float-score-pop {
+            position: absolute;
+            left: 50%;
+            top: 38%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.88);
+            color: #fde047;
+            font-weight: 900;
+            font-size: 1.35rem;
+            padding: 6px 14px;
+            border-radius: 999px;
+            pointer-events: none;
+            z-index: 10;
+            animation: popUpFade 0.85s ease forwards;
+            white-space: nowrap;
+        }
+        @keyframes popUpFade {
+            0% { opacity: 0; transform: translate(-50%, -20%) scale(0.85); }
+            25% { opacity: 1; transform: translate(-50%, -55%) scale(1.08); }
+            100% { opacity: 0; transform: translate(-50%, -105%) scale(1); }
         }
 
         .side-box {
@@ -571,23 +657,36 @@
     <!-- 遊戲畫面 -->
     <div id="game-view" class="game-wrap hidden">
         <div class="hud">
-            <div>
-                <strong id="mode-badge" style="margin-right: 8px;"></strong>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                <strong id="mode-badge"></strong>
                 <span style="font-size: 1.15rem; font-weight: 900;">🏆 分數：<span id="hud-score">0</span></span>
-                <span class="muted" style="margin-left: 8px; font-weight: 700;">最高：<span id="hud-best">0</span></span>
+                <span class="muted" style="font-weight: 700;">最高：<span id="hud-best">0</span></span>
+                <span id="hud-conn-badge" class="conn-dot hidden">
+                    <span id="hud-conn-dot" class="dot-circle"></span>
+                    <span id="hud-conn-text">已連線</span>
+                </span>
             </div>
             <div id="hud-toast" class="status-pill">點選或拖曳方塊放到棋盤上！</div>
         </div>
 
+        <!-- 斷線恢復提示列 -->
+        <div id="disconnect-banner" class="disconnect-banner hidden">
+            <span style="font-weight: 700;">⚠️ 與隊友的連線已中斷，可嘗試重新連線或改為單人繼續。</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn-amber" id="btn-reconnect">🔄 重新連線</button>
+                <button type="button" class="btn-ui" id="btn-switch-solo-now">👤 轉為單人繼續</button>
+            </div>
+        </div>
+
         <div class="game-main">
             <div class="board-column">
-                <!-- 棋盤上方道具列（僅圖示＋數量） -->
+                <!-- 棋盤上方精簡道具列（僅圖示＋數量） -->
                 <div class="top-items-bar">
                     <div id="items-el" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
                     <button type="button" class="btn-ui hidden" id="btn-cancel-item" style="padding: 6px 10px; font-size: 0.88rem;">✖</button>
                 </div>
 
-                <div class="board-card">
+                <div class="board-card" id="board-card-el">
                     <div id="board-el" class="board"></div>
                 </div>
             </div>
@@ -637,7 +736,9 @@
             TOUCH_OFFSET_Y: 64,
             LINE_BASE_SCORE: 100,
             ITEM_CELL_BONUS: 30,
-            ITEM_CLEAR_PER_CELL: 5
+            ITEM_CLEAR_PER_CELL: 5,
+            HEARTBEAT_MS: 3000,
+            STALE_TIMEOUT_MS: 9000
         };
 
         const PALETTE = [
@@ -710,6 +811,7 @@
             over: false,
             boardSize: profile.boardSize,
             score: 0,
+            snapVersion: 0,
             board: [],
             hands: { local: [], remote: [] },
             items: {
@@ -724,17 +826,26 @@
             armedTool: null,
             hoverPos: null,
             ready: false,
-            mate: { name: '隊友', color: PALETTE[0].hex, ready: false }
+            mate: { name: '隊友', color: PALETTE[0].hex, ready: false },
+            connected: false,
+            lastPongAt: 0
         };
 
         let peer = null;
         let conn = null;
         let roomCode = '';
         let builtBoardSize = 0;
+        let heartbeatTimer = null;
 
         function safeSound(type) {
             try {
                 if (typeof playSound === 'function') playSound(type);
+            } catch (_) {}
+        }
+
+        function vibrateFeedback(pattern) {
+            try {
+                if (navigator.vibrate) navigator.vibrate(pattern);
             } catch (_) {}
         }
 
@@ -784,6 +895,88 @@
             if (!el) return;
             el.textContent = msg;
             el.classList.toggle('flash', !!flash);
+        }
+
+        function updateConnStatusUI(status, label) {
+            const badge = document.getElementById('hud-conn-badge');
+            const dot = document.getElementById('hud-conn-dot');
+            const text = document.getElementById('hud-conn-text');
+            const banner = document.getElementById('disconnect-banner');
+
+            if (state.mode !== 'multiplayer') {
+                badge.classList.add('hidden');
+                banner.classList.add('hidden');
+                return;
+            }
+
+            badge.classList.remove('hidden');
+            dot.classList.remove('warn', 'err');
+            if (status === 'ok') {
+                text.textContent = label || '已連線';
+                banner.classList.add('hidden');
+            } else if (status === 'reconnecting') {
+                dot.classList.add('warn');
+                text.textContent = label || '重新連線中...';
+            } else {
+                dot.classList.add('err');
+                text.textContent = label || '已斷線';
+                banner.classList.remove('hidden');
+            }
+        }
+
+        function startHeartbeat() {
+            stopHeartbeat();
+            heartbeatTimer = setInterval(() => {
+                if (state.mode !== 'multiplayer') return;
+                if (conn && conn.open) {
+                    sendData({ type: 'ping', t: Date.now() });
+                    if (state.lastPongAt && Date.now() - state.lastPongAt > GAME_CONFIG.STALE_TIMEOUT_MS) {
+                        handleDisconnected('隊友連線逾時');
+                    }
+                } else if (state.connected) {
+                    handleDisconnected('連線已中斷');
+                }
+            }, GAME_CONFIG.HEARTBEAT_MS);
+        }
+
+        function stopHeartbeat() {
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+            }
+        }
+
+        function handleDisconnected(reason) {
+            if (!state.connected && state.mode !== 'multiplayer') return;
+            state.connected = false;
+            updateConnStatusUI('err', '已斷線');
+            setToast(`⚠️ ${reason}`, true);
+            document.getElementById('conn-msg').textContent = `${reason}，可點擊「重新連線」或改為單人繼續。`;
+        }
+
+        function reconnectPeer() {
+            if (state.mode !== 'multiplayer' || !roomCode) return;
+            updateConnStatusUI('reconnecting', '重新連線中...');
+            setToast('🔄 正在嘗試重新連線...', true);
+            if (state.isHost) {
+                createRoom(roomCode);
+            } else {
+                document.getElementById('input-room-code').value = roomCode;
+                joinRoom();
+            }
+        }
+
+        function convertToSoloNow() {
+            closePeer();
+            stopHeartbeat();
+            state.mode = 'solo';
+            state.isHost = true;
+            state.connected = false;
+            document.getElementById('disconnect-banner').classList.add('hidden');
+            document.getElementById('hud-conn-badge').classList.add('hidden');
+            document.getElementById('mate-box').classList.add('hidden');
+            document.getElementById('mode-badge').textContent = `👤 單人模式（${state.boardSize}×${state.boardSize}）`;
+            setToast('已切換為單人模式，可繼續遊玩！', true);
         }
 
         function computeCellSize(boardSize) {
@@ -847,13 +1040,15 @@
             document.getElementById('btn-lobby-back').addEventListener('click', backToLobby);
             document.getElementById('btn-modal-lobby').addEventListener('click', backToLobby);
             document.getElementById('btn-start-solo').addEventListener('click', startSolo);
-            document.getElementById('btn-create-room').addEventListener('click', createRoom);
+            document.getElementById('btn-create-room').addEventListener('click', () => createRoom());
             document.getElementById('btn-focus-join').addEventListener('click', () => {
                 const inp = document.getElementById('input-room-code');
                 inp.focus();
                 inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
             document.getElementById('btn-join-room').addEventListener('click', joinRoom);
+            document.getElementById('btn-reconnect').addEventListener('click', reconnectPeer);
+            document.getElementById('btn-switch-solo-now').addEventListener('click', convertToSoloNow);
             document.getElementById('btn-copy-code').addEventListener('click', () => {
                 navigator.clipboard?.writeText(roomCode);
                 document.getElementById('lobby-msg').textContent = `已複製房號：${roomCode}`;
@@ -896,8 +1091,10 @@
 
         function startSolo() {
             closePeer();
+            stopHeartbeat();
             state.mode = 'solo';
             state.isHost = true;
+            state.connected = false;
             state.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
             resetMatch();
             showGame();
@@ -910,7 +1107,7 @@
             return s;
         }
 
-        function createRoom() {
+        function createRoom(reuseCode = '') {
             if (typeof Peer === 'undefined') {
                 document.getElementById('lobby-msg').textContent = '連線元件尚未就緒，請稍後再試或先玩單人模式。';
                 return;
@@ -919,8 +1116,9 @@
             state.mode = 'multiplayer';
             state.isHost = true;
             state.ready = false;
+            state.connected = false;
             state.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
-            roomCode = makeCode(5);
+            roomCode = reuseCode || makeCode(5);
 
             document.getElementById('waiting-box').classList.remove('hidden');
             document.getElementById('room-code-text').textContent = roomCode;
@@ -928,7 +1126,9 @@
             document.getElementById('btn-start-mp').classList.remove('hidden');
             document.getElementById('btn-start-mp').disabled = true;
             document.getElementById('conn-msg').textContent = '建立房間中，等待訪客加入...';
+            updateConnStatusUI('reconnecting', '等待連線');
             renderPlayers();
+            startHeartbeat();
 
             peer = new Peer('coopblk-' + roomCode);
             peer.on('open', () => {
@@ -940,6 +1140,7 @@
             });
             peer.on('error', err => {
                 document.getElementById('conn-msg').textContent = '連線提示：' + (err.type || err);
+                updateConnStatusUI('err', '連線異常');
             });
         }
 
@@ -957,6 +1158,7 @@
             state.mode = 'multiplayer';
             state.isHost = false;
             state.ready = false;
+            state.connected = false;
             roomCode = code;
 
             document.getElementById('waiting-box').classList.remove('hidden');
@@ -964,7 +1166,9 @@
             document.getElementById('waiting-board-info').textContent = '棋盤尺寸：由房主開局同步';
             document.getElementById('btn-start-mp').classList.add('hidden');
             document.getElementById('conn-msg').textContent = '正在連線至房主...';
+            updateConnStatusUI('reconnecting', '連線中...');
             renderPlayers();
+            startHeartbeat();
 
             peer = new Peer();
             peer.on('open', () => {
@@ -973,23 +1177,30 @@
             });
             peer.on('error', err => {
                 document.getElementById('conn-msg').textContent = '加入失敗：' + (err.type || err);
+                updateConnStatusUI('err', '連線失敗');
             });
         }
 
         function bindConn() {
             conn.on('open', () => {
+                state.connected = true;
+                state.lastPongAt = Date.now();
                 document.getElementById('conn-msg').textContent = '已與夥伴連線！雙方可按「準備完成」。';
+                updateConnStatusUI('ok', '已連線');
                 sendData({ type: 'profile', profile: publicProfile() });
+                if (state.mode === 'multiplayer' && state.isHost && state.playing) {
+                    sendData({ type: 'snap', snap: snapshot() });
+                }
             });
             conn.on('data', handleData);
-            conn.on('close', () => {
-                setToast('⚠️ 連線已中斷', true);
-                document.getElementById('conn-msg').textContent = '夥伴已離開房間。';
-            });
+            conn.on('close', () => handleDisconnected('連線已關閉'));
+            conn.on('error', () => handleDisconnected('連線發生中斷'));
         }
 
         function sendData(obj) {
-            if (conn && conn.open) conn.send(obj);
+            if (conn && conn.open) {
+                try { conn.send(obj); } catch (_) {}
+            }
         }
 
         function toggleReady() {
@@ -1034,6 +1245,7 @@
         }
 
         function backToLobby() {
+            stopHeartbeat();
             document.getElementById('gameover-modal').style.display = 'none';
             document.getElementById('game-view').classList.add('hidden');
             document.getElementById('btn-lobby-back').classList.add('hidden');
@@ -1057,8 +1269,10 @@
             if (isMp) {
                 mateBox.classList.remove('hidden');
                 mateBox.innerHTML = `夥伴：<strong>${state.mate.name}</strong>`;
+                updateConnStatusUI(state.connected ? 'ok' : 'err', state.connected ? '已連線' : '已斷線');
             } else {
                 mateBox.classList.add('hidden');
+                updateConnStatusUI('off');
             }
 
             buildBoard();
@@ -1096,6 +1310,7 @@
             const n = state.boardSize;
             state.board = Array.from({ length: n }, () => Array(n).fill(null));
             state.score = 0;
+            state.snapVersion = 0;
             state.playing = true;
             state.over = false;
             state.pickedSlot = null;
@@ -1118,7 +1333,9 @@
         }
 
         function snapshot() {
+            state.snapVersion += 1;
             return {
+                version: state.snapVersion,
                 boardSize: state.boardSize,
                 board: state.board,
                 score: state.score,
@@ -1132,6 +1349,10 @@
         }
 
         function applySnap(s) {
+            if (!s) return;
+            if (typeof s.version === 'number' && s.version < state.snapVersion) return;
+            if (typeof s.version === 'number') state.snapVersion = s.version;
+
             state.boardSize = ensureValidBoardSize(s.boardSize);
             state.board = s.board;
             state.score = s.score;
@@ -1150,16 +1371,30 @@
 
         function handleData(msg) {
             if (!msg || !msg.type) return;
-            if (msg.type === 'profile') {
+            state.connected = true;
+            state.lastPongAt = Date.now();
+            updateConnStatusUI('ok', '已連線');
+
+            if (msg.type === 'ping') {
+                sendData({ type: 'pong', t: msg.t });
+            } else if (msg.type === 'pong') {
+                const rtt = Math.max(1, Date.now() - (msg.t || Date.now()));
+                updateConnStatusUI('ok', `已連線 (${rtt}ms)`);
+            } else if (msg.type === 'profile') {
                 state.mate = { ...state.mate, ...msg.profile };
                 renderPlayers();
                 refreshStartBtn();
+                if (state.playing) {
+                    document.getElementById('mate-box').innerHTML = `夥伴：<strong>${state.mate.name}</strong>`;
+                }
             } else if (msg.type === 'ready') {
                 state.mate.ready = !!msg.ready;
                 renderPlayers();
                 refreshStartBtn();
             } else if (msg.type === 'snap') {
                 applySnap(msg.snap);
+            } else if (msg.type === 'fx') {
+                triggerBoardEffect(msg.coords || [], msg.fxType || 'clear', msg.label || '');
             } else if (msg.type === 'toast') {
                 setToast(msg.text, true);
             } else if (msg.type === 'place' && state.isHost) {
@@ -1168,6 +1403,26 @@
                 applyItem('remote', msg.tool, msg.r, msg.c);
             } else if (msg.type === 'replay' && state.isHost) {
                 hostStart();
+            }
+        }
+
+        function triggerBoardEffect(coords, fxType, label) {
+            const cls = fxType === 'bomb' ? 'fx-bomb' : 'fx-clear';
+            coords.forEach(([r, c]) => {
+                const cellEl = document.querySelector(`#board-el .cell[data-r="${r}"][data-c="${c}"]`);
+                if (cellEl) {
+                    cellEl.classList.add(cls);
+                    setTimeout(() => cellEl.classList.remove(cls), 260);
+                }
+            });
+
+            if (label) {
+                const card = document.getElementById('board-card-el');
+                const pop = document.createElement('div');
+                pop.className = 'float-score-pop';
+                pop.textContent = label;
+                card.appendChild(pop);
+                setTimeout(() => pop.remove(), 880);
             }
         }
 
@@ -1285,9 +1540,11 @@
             cols.forEach(c => { for (let r = 0; r < n; r++) targets.add(`${r},${c}`); });
 
             const got = [];
+            const coords = [];
             let itemCells = 0;
             targets.forEach(key => {
                 const [r, c] = key.split(',').map(Number);
+                coords.push([r, c]);
                 const cell = state.board[r][c];
                 if (cell && cell.item) {
                     state.items[who][cell.item] = (state.items[who][cell.item] || 0) + 1;
@@ -1301,6 +1558,13 @@
             state.score += pts;
             state.stats[who].lines += lines;
             safeSound('clear');
+            vibrateFeedback(lines > 1 ? [35, 25, 45] : 30);
+
+            const popLabel = lines > 1 ? `🔥 ${lines} 連消 +${pts}` : `✨ +${pts}`;
+            triggerBoardEffect(coords, 'clear', popLabel);
+            if (state.mode === 'multiplayer' && state.isHost) {
+                sendData({ type: 'fx', coords, fxType: 'clear', label: popLabel });
+            }
 
             const text = got.length
                 ? `✨ 消除 ${lines} 排（+${pts} 分）並獲得 ${got.join(' ')}！`
@@ -1329,7 +1593,7 @@
             renderBoard();
             if (state.armedTool) {
                 safeSound('good');
-                setToast(`${ITEMS[tool].icon} 移動到棋盤可預覽範圍，點選即可清除！`, true);
+                setToast(`${ITEMS[tool].icon} 移動到棋盤可預覽清除範圍，點選即可清除！`, true);
             } else {
                 setToast('已取消道具');
             }
@@ -1366,28 +1630,42 @@
             } else {
                 const n = state.boardSize;
                 let cleared = 0;
+                const fxCoords = [];
                 if (tool === 'bomb') {
                     for (let dr = -1; dr <= 1; dr++) {
                         for (let dc = -1; dc <= 1; dc++) {
                             const nr = r + dr, nc = c + dc;
-                            if (nr >= 0 && nr < n && nc >= 0 && nc < n && state.board[nr][nc]) {
-                                state.board[nr][nc] = null;
-                                cleared++;
+                            if (nr >= 0 && nr < n && nc >= 0 && nc < n) {
+                                fxCoords.push([nr, nc]);
+                                if (state.board[nr][nc]) {
+                                    state.board[nr][nc] = null;
+                                    cleared++;
+                                }
                             }
                         }
                     }
                 } else if (tool === 'col') {
                     for (let nr = 0; nr < n; nr++) {
+                        fxCoords.push([nr, c]);
                         if (state.board[nr][c]) { state.board[nr][c] = null; cleared++; }
                     }
                 } else if (tool === 'row') {
                     for (let nc = 0; nc < n; nc++) {
+                        fxCoords.push([r, nc]);
                         if (state.board[r][nc]) { state.board[r][nc] = null; cleared++; }
                     }
                 }
                 const pts = cleared * GAME_CONFIG.ITEM_CLEAR_PER_CELL;
                 state.score += pts;
                 safeSound('clear');
+                vibrateFeedback([40, 20, 40]);
+
+                const popLabel = `${ITEMS[tool].icon} -${cleared} 格 (+${pts})`;
+                triggerBoardEffect(fxCoords, 'bomb', popLabel);
+                if (state.mode === 'multiplayer' && state.isHost) {
+                    sendData({ type: 'fx', coords: fxCoords, fxType: 'bomb', label: popLabel });
+                }
+
                 const text = `${ITEMS[tool].icon} 清除 ${cleared} 格（+${pts} 分）！`;
                 if (who === 'local') setToast(text, true);
                 else sendData({ type: 'toast', text });
@@ -1486,7 +1764,7 @@
                     const cellEl = document.querySelector(`#board-el .cell[data-r="${r}"][data-c="${c}"]`);
                     if (!cellEl) continue;
                     const d = state.board[r] && state.board[r][c];
-                    cellEl.className = 'cell';
+                    cellEl.classList.remove('filled', 'ok-preview', 'bad-preview', 'aim-cell', 'tool-blast-preview');
                     cellEl.style.backgroundColor = '';
                     cellEl.textContent = '';
 
@@ -1630,7 +1908,6 @@
             });
         }
 
-        // 讓浮動方塊本體與綠色陰影預覽框完全對齊（以左上角第一格中心定位）
         function updateTouchGhostAndAim(piece, touchX, touchY) {
             const g = document.getElementById('ghost-el');
             const cellPx = computeCellSize(state.boardSize);
@@ -1641,7 +1918,6 @@
             const totalH = rows * step - 2;
             const offY = profile.offset ? GAME_CONFIG.TOUCH_OFFSET_Y : 0;
 
-            // 浮動方塊左上角座標（若開啟偏移則整體往上移 offY）
             const topLeftX = touchX - totalW / 2;
             const topLeftY = touchY - totalH / 2 - offY;
 
@@ -1671,7 +1947,6 @@
                 });
             });
 
-            // 以浮動方塊「左上角第一格」的中心點去對應棋盤格子，確保藍色方塊與綠色框重疊一致
             const anchorProbeX = topLeftX + cellPx / 2;
             const anchorProbeY = topLeftY + cellPx / 2;
             const hit = document.elementFromPoint(anchorProbeX, anchorProbeY);
