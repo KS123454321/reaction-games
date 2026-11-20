@@ -251,8 +251,8 @@
         }
         .status-pill {
             font-weight: 700;
-            font-size: 0.94rem;
-            padding: 6px 12px;
+            font-size: 0.92rem;
+            padding: 5px 12px;
             border-radius: 999px;
             background: rgba(37, 99, 235, 0.15);
             color: #2563eb;
@@ -268,6 +268,44 @@
             color: #fbbf24;
         }
 
+        /* 棋盤上方精簡道具列（僅圖示＋數量） */
+        .top-items-bar {
+            width: 100%;
+            max-width: 560px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            border-radius: 14px;
+            padding: 8px 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-sizing: border-box;
+        }
+        .mini-item-btn {
+            padding: 7px 12px;
+            border-radius: 10px;
+            border: 2px solid var(--border-line);
+            background: var(--bg-sub);
+            color: var(--text-primary);
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .mini-item-btn.armed {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.25);
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+        }
+        .mini-item-btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
         .game-main {
             width: 100%;
             display: flex;
@@ -275,6 +313,14 @@
             justify-content: center;
             align-items: flex-start;
             gap: 14px;
+        }
+
+        .board-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            max-width: 100%;
         }
 
         .board-card {
@@ -386,34 +432,6 @@
             justify-content: center;
             font-size: 0.62rem;
             color: #fff;
-        }
-
-        .items-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-        .item-card-btn {
-            padding: 9px 10px;
-            border-radius: 10px;
-            border: 2px solid var(--border-line);
-            background: var(--bg-sub);
-            color: var(--text-primary);
-            font-weight: 700;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .item-card-btn.armed {
-            border-color: #f59e0b;
-            background: rgba(245, 158, 11, 0.25);
-            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
-        }
-        .item-card-btn:disabled {
-            opacity: 0.38;
-            cursor: not-allowed;
         }
 
         .offset-check {
@@ -554,16 +572,24 @@
     <div id="game-view" class="game-wrap hidden">
         <div class="hud">
             <div>
-                <strong id="mode-badge" style="margin-right: 10px;"></strong>
-                <span style="font-size: 1.2rem; font-weight: 900;">🏆 分數：<span id="hud-score">0</span></span>
-                <span class="muted" style="margin-left: 10px; font-weight: 700;">最高：<span id="hud-best">0</span></span>
+                <strong id="mode-badge" style="margin-right: 8px;"></strong>
+                <span style="font-size: 1.15rem; font-weight: 900;">🏆 分數：<span id="hud-score">0</span></span>
+                <span class="muted" style="margin-left: 8px; font-weight: 700;">最高：<span id="hud-best">0</span></span>
             </div>
             <div id="hud-toast" class="status-pill">點選或拖曳方塊放到棋盤上！</div>
         </div>
 
         <div class="game-main">
-            <div class="board-card">
-                <div id="board-el" class="board"></div>
+            <div class="board-column">
+                <!-- 棋盤上方道具列（僅圖示＋數量） -->
+                <div class="top-items-bar">
+                    <div id="items-el" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
+                    <button type="button" class="btn-ui hidden" id="btn-cancel-item" style="padding: 6px 10px; font-size: 0.88rem;">✖</button>
+                </div>
+
+                <div class="board-card">
+                    <div id="board-el" class="board"></div>
+                </div>
             </div>
 
             <div class="side-box">
@@ -576,12 +602,6 @@
                     <input type="checkbox" id="chk-offset-game">
                     <span>📱 觸控上方偏移瞄準（防遮擋）</span>
                 </label>
-
-                <div>
-                    <div style="font-weight: 700; margin-bottom: 8px;">🎒 道具背包（點選後移動可預覽範圍）</div>
-                    <div id="items-el" class="items-row"></div>
-                    <button type="button" class="btn-ui hidden" id="btn-cancel-item" style="width: 100%; margin-top: 8px;">✖ 取消道具</button>
-                </div>
 
                 <div id="mate-box" class="muted hidden" style="font-size: 0.9rem; border-top: 1px solid var(--border-line); padding-top: 8px;"></div>
             </div>
@@ -607,14 +627,14 @@
         const GAME_CONFIG = {
             DEFAULT_BOARD_SIZE: 9,
             HAND_SIZE: 3,
-            ITEM_DROP_RATE: 0.05,     // 調低道具出現機率，保持稀有度
+            ITEM_DROP_RATE: 0.05,
             ITEM_WEIGHTS: {
                 bomb: 35,
                 col: 25,
                 row: 25,
                 reroll: 15
             },
-            TOUCH_OFFSET_Y: 72,       // 觸控上方偏移像素（與浮動方塊及棋盤預覽同步對齊）
+            TOUCH_OFFSET_Y: 64,
             LINE_BASE_SCORE: 100,
             ITEM_CELL_BONUS: 30,
             ITEM_CLEAR_PER_CELL: 5
@@ -629,7 +649,6 @@
             { name: '青提色', hex: '#0d9488' }
         ];
 
-        // 1～5 格方塊圖鑑庫（包含凹型、大 T 型、階梯型等多種 5 格形狀）
         const SHAPES = [
             [[1]],
             [[1, 1]], [[1], [1]],
@@ -640,17 +659,13 @@
             [[1, 1, 0], [0, 1, 1]], [[0, 1, 1], [1, 1, 0]],
             [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]],
             [[1, 1, 1], [0, 1, 0]], [[0, 1, 0], [1, 1, 1]],
-            // 5 格長條與經典型
             [[1, 1, 1, 1, 1]], [[1], [1], [1], [1], [1]],
             [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
             [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
-            // 5 格凹型（U 型）
             [[1, 0, 1], [1, 1, 1]], [[1, 1, 1], [1, 0, 1]],
             [[1, 1], [1, 0], [1, 1]], [[1, 1], [0, 1], [1, 1]],
-            // 5 格大 T 型
             [[1, 1, 1], [0, 1, 0], [0, 1, 0]], [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
             [[1, 0, 0], [1, 1, 1], [1, 0, 0]], [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
-            // 5 格階梯型
             [[1, 1, 0], [0, 1, 1], [0, 0, 1]], [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
             [[1, 0, 0], [1, 1, 0], [0, 1, 1]], [[0, 0, 1], [0, 1, 1], [1, 1, 0]]
         ];
@@ -1314,7 +1329,7 @@
             renderBoard();
             if (state.armedTool) {
                 safeSound('good');
-                setToast(`${ITEMS[tool].icon} 移動到棋盤可預覽清除範圍，點選即可引爆！`, true);
+                setToast(`${ITEMS[tool].icon} 移動到棋盤可預覽範圍，點選即可清除！`, true);
             } else {
                 setToast('已取消道具');
             }
@@ -1382,7 +1397,6 @@
             syncAll();
         }
 
-        // 只要所有方塊都無法放入棋盤任何空位即判定結束（雙人則雙方方塊皆無可放位置）
         function hasAnyPlaceableHand(hand) {
             return hand.some(p => p && canPiecePlaceAnywhere(p));
         }
@@ -1499,7 +1513,6 @@
             const { r: r0, c: c0 } = state.hoverPos;
             const n = state.boardSize;
 
-            // 道具清除範圍預覽
             if (state.armedTool && ['bomb', 'col', 'row'].includes(state.armedTool)) {
                 const coords = [];
                 if (state.armedTool === 'bomb') {
@@ -1521,7 +1534,6 @@
                 return;
             }
 
-            // 方塊放置預覽
             if (state.pickedSlot === null) return;
             const p = state.hands.local[state.pickedSlot];
             if (!p) return;
@@ -1592,16 +1604,14 @@
                         renderHand();
                         renderBoard();
                         const t = e.touches[0];
-                        showGhost(p, t.clientX, t.clientY);
-                        aimTouch(t.clientX, t.clientY);
+                        updateTouchGhostAndAim(p, t.clientX, t.clientY);
                     }, { passive: false });
 
                     slot.addEventListener('touchmove', e => {
                         if (state.pickedSlot !== idx) return;
                         e.preventDefault();
                         const t = e.touches[0];
-                        showGhost(p, t.clientX, t.clientY);
-                        aimTouch(t.clientX, t.clientY);
+                        updateTouchGhostAndAim(p, t.clientX, t.clientY);
                     }, { passive: false });
 
                     slot.addEventListener('touchend', e => {
@@ -1620,26 +1630,26 @@
             });
         }
 
-        function aimPoint(x, y) {
-            const off = profile.offset ? GAME_CONFIG.TOUCH_OFFSET_Y : 0;
-            return { x, y: y - off };
-        }
-
-        // 浮動方塊與瞄準點同步偏移，避免方塊本體與預覽位置錯開
-        function showGhost(piece, x, y) {
+        // 讓浮動方塊本體與綠色陰影預覽框完全對齊（以左上角第一格中心定位）
+        function updateTouchGhostAndAim(piece, touchX, touchY) {
             const g = document.getElementById('ghost-el');
-            const pt = aimPoint(x, y);
             const cellPx = computeCellSize(state.boardSize);
+            const step = cellPx + 2;
             const cols = piece.matrix[0].length;
             const rows = piece.matrix.length;
-            const totalW = cols * (cellPx + 2);
-            const totalH = rows * (cellPx + 2);
+            const totalW = cols * step - 2;
+            const totalH = rows * step - 2;
+            const offY = profile.offset ? GAME_CONFIG.TOUCH_OFFSET_Y : 0;
+
+            // 浮動方塊左上角座標（若開啟偏移則整體往上移 offY）
+            const topLeftX = touchX - totalW / 2;
+            const topLeftY = touchY - totalH / 2 - offY;
 
             g.style.display = 'grid';
             g.style.gridTemplateColumns = `repeat(${cols}, ${cellPx}px)`;
             g.style.gap = '2px';
-            g.style.left = (pt.x - totalW / 2) + 'px';
-            g.style.top = (pt.y - totalH / 2) + 'px';
+            g.style.left = topLeftX + 'px';
+            g.style.top = topLeftY + 'px';
             g.innerHTML = '';
 
             piece.matrix.forEach(row => {
@@ -1660,22 +1670,22 @@
                     g.appendChild(d);
                 });
             });
+
+            // 以浮動方塊「左上角第一格」的中心點去對應棋盤格子，確保藍色方塊與綠色框重疊一致
+            const anchorProbeX = topLeftX + cellPx / 2;
+            const anchorProbeY = topLeftY + cellPx / 2;
+            const hit = document.elementFromPoint(anchorProbeX, anchorProbeY);
+            const cell = hit?.closest('#board-el .cell');
+            state.hoverPos = cell
+                ? { r: parseInt(cell.dataset.r, 10), c: parseInt(cell.dataset.c, 10) }
+                : null;
+            drawPreview();
         }
 
         function hideGhost() {
             const g = document.getElementById('ghost-el');
             g.style.display = 'none';
             g.innerHTML = '';
-        }
-
-        function aimTouch(x, y) {
-            const pt = aimPoint(x, y);
-            const hit = document.elementFromPoint(pt.x, pt.y);
-            const cell = hit?.closest('#board-el .cell');
-            state.hoverPos = cell
-                ? { r: parseInt(cell.dataset.r, 10), c: parseInt(cell.dataset.c, 10) }
-                : null;
-            drawPreview();
         }
 
         function renderItems() {
@@ -1686,9 +1696,10 @@
                 const armed = state.armedTool === key;
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'item-card-btn' + (armed ? ' armed' : '');
+                btn.className = 'mini-item-btn' + (armed ? ' armed' : '');
                 btn.disabled = cnt <= 0;
-                btn.innerHTML = `<span>${meta.icon} ${meta.name}${armed ? ' ●' : ''}</span><span>×${cnt}</span>`;
+                btn.title = meta.name;
+                btn.innerHTML = `<span>${meta.icon}</span><span>×${cnt}</span>`;
                 btn.addEventListener('click', () => clickTool(key));
                 box.appendChild(btn);
             });
