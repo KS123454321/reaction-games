@@ -38,7 +38,7 @@
         }
 
         body {
-            padding: 12px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -47,13 +47,13 @@
 
         .top-bar {
             width: 100%;
-            max-width: 1020px;
+            max-width: 1040px;
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .top-group {
             display: flex;
@@ -64,7 +64,7 @@
 
         .btn-ui {
             padding: 8px 14px;
-            font-size: 1rem;
+            font-size: 0.98rem;
             font-weight: 700;
             border-radius: 12px;
             border: 2px solid var(--border-line);
@@ -94,22 +94,24 @@
         .profile-box {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
+            gap: 14px;
             align-items: center;
-            margin: 14px 0;
+            margin: 12px 0;
             padding: 12px;
             border-radius: 14px;
             background: var(--bg-sub);
         }
 
-        .name-input {
+        .name-input, .select-box {
             padding: 8px 12px;
             font-size: 1rem;
             border-radius: 10px;
             border: 2px solid var(--border-line);
             background: var(--bg-card);
             color: var(--text-primary);
-            min-width: 150px;
+        }
+        .name-input {
+            min-width: 140px;
         }
 
         .swatch-row {
@@ -129,7 +131,7 @@
         }
         .color-swatch.selected {
             border-color: var(--text-primary);
-            transform: scale(1.15);
+            transform: scale(1.16);
             box-shadow: 0 0 0 2px var(--bg-card);
         }
 
@@ -249,7 +251,7 @@
         }
         .status-pill {
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.94rem;
             padding: 6px 12px;
             border-radius: 999px;
             background: rgba(37, 99, 235, 0.15);
@@ -289,26 +291,16 @@
             user-select: none;
         }
         .cell {
-            width: 28px;
-            height: 28px;
+            width: var(--cell-size, 32px);
+            height: var(--cell-size, 32px);
             border-radius: 5px;
             background-color: var(--bg-sub);
             border: 1px solid var(--border-line);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.85rem;
+            font-size: calc(var(--cell-size, 32px) * 0.52);
             box-sizing: border-box;
-        }
-        @media (max-width: 520px) {
-            .cell {
-                width: calc((100vw - 56px) / 14);
-                height: calc((100vw - 56px) / 14);
-                max-width: 24px;
-                max-height: 24px;
-                border-radius: 4px;
-                font-size: 0.68rem;
-            }
         }
         .cell.filled {
             border-color: rgba(255, 255, 255, 0.5);
@@ -326,8 +318,13 @@
             z-index: 2;
         }
         .cell.aim-cell {
-            outline: 2px dashed #f59e0b;
+            outline: 1.5px dashed rgba(245, 158, 11, 0.65);
             cursor: crosshair;
+        }
+        .cell.tool-blast-preview {
+            background-color: rgba(249, 115, 22, 0.45) !important;
+            outline: 2.5px solid #ea580c;
+            z-index: 3;
         }
 
         .side-box {
@@ -350,7 +347,7 @@
             gap: 8px;
         }
         .slot {
-            min-height: 84px;
+            min-height: 86px;
             background: var(--bg-sub);
             border: 2px solid var(--border-line);
             border-radius: 12px;
@@ -360,11 +357,16 @@
             justify-content: center;
             cursor: pointer;
             touch-action: none;
+            transition: opacity 0.15s, filter 0.15s, border-color 0.12s;
         }
         .slot.empty {
-            opacity: 0.35;
+            opacity: 0.32;
             border-style: dashed;
             cursor: default;
+        }
+        .slot.unplaceable {
+            filter: brightness(0.55) saturate(0.45);
+            opacity: 0.58;
         }
         .slot.picked {
             border-color: #10b981;
@@ -437,7 +439,7 @@
             pointer-events: none;
             z-index: 999;
             display: none;
-            opacity: 0.9;
+            opacity: 0.92;
         }
 
         .modal-bg {
@@ -492,6 +494,15 @@
                 <strong>代表顏色：</strong>
                 <div id="swatch-list" class="swatch-row"></div>
             </div>
+            <label>
+                <strong>棋盤大小：</strong>
+                <select id="select-board-size" class="select-box">
+                    <option value="7">7 × 7</option>
+                    <option value="9" selected>9 × 9（預設）</option>
+                    <option value="11">11 × 11</option>
+                    <option value="14">14 × 14</option>
+                </select>
+            </label>
         </div>
 
         <label class="offset-check" style="margin-bottom: 12px;">
@@ -502,11 +513,11 @@
         <div class="mode-cards">
             <button type="button" class="mode-btn-card" id="btn-start-solo">
                 <h3>👤 單人模式</h3>
-                <p>立即開始個人挑戰，挑戰單人最高紀錄。</p>
+                <p>依目前選擇的棋盤大小開始個人挑戰，挑戰最高紀錄。</p>
             </button>
             <button type="button" class="mode-btn-card" id="btn-create-room">
                 <h3>🏠 建立雙人房間</h3>
-                <p>產生房間代碼與分享連結，邀請好友連線合作。</p>
+                <p>依目前選擇的棋盤大小建立房間，分享房號邀請好友。</p>
             </button>
             <button type="button" class="mode-btn-card" id="btn-focus-join">
                 <h3>🔗 加入雙人房間</h3>
@@ -529,7 +540,8 @@
                 <button type="button" class="btn-ui" id="btn-copy-code">📋 複製房號</button>
                 <button type="button" class="btn-ui" id="btn-copy-link">🔗 複製連結</button>
             </div>
-            <div id="conn-msg" class="muted" style="margin-top: 6px; font-size: 0.95rem;">等待連線中...</div>
+            <div id="waiting-board-info" class="muted" style="margin-top: 6px; font-size: 0.92rem;"></div>
+            <div id="conn-msg" class="muted" style="margin-top: 4px; font-size: 0.95rem;">等待連線中...</div>
             <div id="players-list" class="players-grid"></div>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
                 <button type="button" class="btn-blue" id="btn-ready">✅ 準備完成</button>
@@ -566,7 +578,7 @@
                 </label>
 
                 <div>
-                    <div style="font-weight: 700; margin-bottom: 8px;">🎒 道具背包（點選後立即瞄準，再點棋盤）</div>
+                    <div style="font-weight: 700; margin-bottom: 8px;">🎒 道具背包（點選後移動可預覽範圍）</div>
                     <div id="items-el" class="items-row"></div>
                     <button type="button" class="btn-ui hidden" id="btn-cancel-item" style="width: 100%; margin-top: 8px;">✖ 取消道具</button>
                 </div>
@@ -593,16 +605,16 @@
 
     <script>
         const GAME_CONFIG = {
-            BOARD_SIZE: 9,
+            DEFAULT_BOARD_SIZE: 9,
             HAND_SIZE: 3,
-            ITEM_DROP_RATE: 0.14,
+            ITEM_DROP_RATE: 0.05,     // 調低道具出現機率，保持稀有度
             ITEM_WEIGHTS: {
-                bomb: 30,
+                bomb: 35,
                 col: 25,
                 row: 25,
-                reroll: 20
+                reroll: 15
             },
-            TOUCH_OFFSET_Y: 92,
+            TOUCH_OFFSET_Y: 72,       // 觸控上方偏移像素（與浮動方塊及棋盤預覽同步對齊）
             LINE_BASE_SCORE: 100,
             ITEM_CELL_BONUS: 30,
             ITEM_CLEAR_PER_CELL: 5
@@ -617,6 +629,7 @@
             { name: '青提色', hex: '#0d9488' }
         ];
 
+        // 1～5 格方塊圖鑑庫（包含凹型、大 T 型、階梯型等多種 5 格形狀）
         const SHAPES = [
             [[1]],
             [[1, 1]], [[1], [1]],
@@ -627,9 +640,19 @@
             [[1, 1, 0], [0, 1, 1]], [[0, 1, 1], [1, 1, 0]],
             [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]],
             [[1, 1, 1], [0, 1, 0]], [[0, 1, 0], [1, 1, 1]],
+            // 5 格長條與經典型
             [[1, 1, 1, 1, 1]], [[1], [1], [1], [1], [1]],
             [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
-            [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+            [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+            // 5 格凹型（U 型）
+            [[1, 0, 1], [1, 1, 1]], [[1, 1, 1], [1, 0, 1]],
+            [[1, 1], [1, 0], [1, 1]], [[1, 1], [0, 1], [1, 1]],
+            // 5 格大 T 型
+            [[1, 1, 1], [0, 1, 0], [0, 1, 0]], [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
+            [[1, 0, 0], [1, 1, 1], [1, 0, 0]], [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
+            // 5 格階梯型
+            [[1, 1, 0], [0, 1, 1], [0, 0, 1]], [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
+            [[1, 0, 0], [1, 1, 0], [0, 1, 1]], [[0, 0, 1], [0, 1, 1], [1, 1, 0]]
         ];
 
         const ITEMS = {
@@ -642,22 +665,35 @@
         const KEYS = {
             name: 'coop_blocks_name',
             color: 'coop_blocks_color',
-            offset: 'coop_blocks_offset'
+            offset: 'coop_blocks_offset',
+            boardSize: 'coop_blocks_board_size'
         };
+
+        function ensureValidColor(hex) {
+            return PALETTE.some(p => p.hex === hex) ? hex : PALETTE[1].hex;
+        }
+
+        function ensureValidBoardSize(val) {
+            const n = parseInt(val, 10);
+            return [7, 9, 11, 14].includes(n) ? n : GAME_CONFIG.DEFAULT_BOARD_SIZE;
+        }
 
         const profile = {
             name: localStorage.getItem(KEYS.name) || '玩家',
-            color: localStorage.getItem(KEYS.color) || PALETTE[1].hex,
+            color: ensureValidColor(localStorage.getItem(KEYS.color)),
             offset: localStorage.getItem(KEYS.offset) === null
                 ? true
-                : localStorage.getItem(KEYS.offset) === 'true'
+                : localStorage.getItem(KEYS.offset) === 'true',
+            boardSize: ensureValidBoardSize(localStorage.getItem(KEYS.boardSize))
         };
+        localStorage.setItem(KEYS.color, profile.color);
 
         const state = {
             mode: 'solo',
             isHost: true,
             playing: false,
             over: false,
+            boardSize: profile.boardSize,
             score: 0,
             board: [],
             hands: { local: [], remote: [] },
@@ -679,7 +715,7 @@
         let peer = null;
         let conn = null;
         let roomCode = '';
-        let boardBuilt = false;
+        let builtBoardSize = 0;
 
         function safeSound(type) {
             try {
@@ -735,6 +771,19 @@
             el.classList.toggle('flash', !!flash);
         }
 
+        function computeCellSize(boardSize) {
+            const vw = window.innerWidth || 360;
+            const avail = Math.min(vw - 44, 520);
+            const gapTotal = (boardSize - 1) * 2;
+            const raw = Math.floor((avail - gapTotal) / boardSize);
+            return Math.max(18, Math.min(36, raw));
+        }
+
+        function applyBoardCellSize() {
+            const size = computeCellSize(state.boardSize);
+            document.documentElement.style.setProperty('--cell-size', size + 'px');
+        }
+
         function initLobby() {
             const nameEl = document.getElementById('input-name');
             nameEl.value = profile.name;
@@ -743,6 +792,14 @@
                 localStorage.setItem(KEYS.name, profile.name);
                 sendData({ type: 'profile', profile: publicProfile() });
                 renderPlayers();
+            });
+
+            const sizeSelect = document.getElementById('select-board-size');
+            sizeSelect.value = String(profile.boardSize);
+            sizeSelect.addEventListener('change', () => {
+                profile.boardSize = ensureValidBoardSize(sizeSelect.value);
+                localStorage.setItem(KEYS.boardSize, String(profile.boardSize));
+                updateWaitingBoardInfo();
             });
 
             const swatchBox = document.getElementById('swatch-list');
@@ -754,8 +811,8 @@
                 btn.style.backgroundColor = item.hex;
                 btn.title = item.name;
                 btn.addEventListener('click', () => {
-                    profile.color = item.hex;
-                    localStorage.setItem(KEYS.color, profile.hex);
+                    profile.color = ensureValidColor(item.hex);
+                    localStorage.setItem(KEYS.color, profile.color);
                     document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
                     btn.classList.add('selected');
                     sendData({ type: 'profile', profile: publicProfile() });
@@ -802,11 +859,20 @@
             });
             document.getElementById('btn-replay').addEventListener('click', replayMatch);
 
+            window.addEventListener('resize', () => {
+                if (state.playing) applyBoardCellSize();
+            });
+
             const qRoom = new URLSearchParams(window.location.search).get('room');
             if (qRoom) {
                 document.getElementById('input-room-code').value = qRoom.toUpperCase();
                 document.getElementById('lobby-msg').textContent = `已帶入房號 ${qRoom.toUpperCase()}，點擊「加入房間」即可連線。`;
             }
+        }
+
+        function updateWaitingBoardInfo() {
+            const el = document.getElementById('waiting-board-info');
+            if (el) el.textContent = `棋盤尺寸：${state.boardSize} × ${state.boardSize}`;
         }
 
         function publicProfile() {
@@ -817,6 +883,7 @@
             closePeer();
             state.mode = 'solo';
             state.isHost = true;
+            state.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
             resetMatch();
             showGame();
         }
@@ -830,17 +897,19 @@
 
         function createRoom() {
             if (typeof Peer === 'undefined') {
-                document.getElementById('lobby-msg').textContent = '連線元件載入中或網路受限，請稍後再試，或先使用單人模式。';
+                document.getElementById('lobby-msg').textContent = '連線元件尚未就緒，請稍後再試或先玩單人模式。';
                 return;
             }
             closePeer();
             state.mode = 'multiplayer';
             state.isHost = true;
             state.ready = false;
+            state.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
             roomCode = makeCode(5);
 
             document.getElementById('waiting-box').classList.remove('hidden');
             document.getElementById('room-code-text').textContent = roomCode;
+            updateWaitingBoardInfo();
             document.getElementById('btn-start-mp').classList.remove('hidden');
             document.getElementById('btn-start-mp').disabled = true;
             document.getElementById('conn-msg').textContent = '建立房間中，等待訪客加入...';
@@ -877,6 +946,7 @@
 
             document.getElementById('waiting-box').classList.remove('hidden');
             document.getElementById('room-code-text').textContent = roomCode;
+            document.getElementById('waiting-board-info').textContent = '棋盤尺寸：由房主開局同步';
             document.getElementById('btn-start-mp').classList.add('hidden');
             document.getElementById('conn-msg').textContent = '正在連線至房主...';
             renderPlayers();
@@ -963,8 +1033,11 @@
             document.getElementById('game-view').classList.remove('hidden');
             document.getElementById('btn-lobby-back').classList.remove('hidden');
 
+            applyBoardCellSize();
             const isMp = state.mode === 'multiplayer';
-            document.getElementById('mode-badge').textContent = isMp ? '🤝 雙人合作' : '👤 單人模式';
+            document.getElementById('mode-badge').textContent =
+                `${isMp ? '🤝 雙人合作' : '👤 單人模式'}（${state.boardSize}×${state.boardSize}）`;
+
             const mateBox = document.getElementById('mate-box');
             if (isMp) {
                 mateBox.classList.remove('hidden');
@@ -1005,7 +1078,7 @@
         }
 
         function resetMatch() {
-            const n = GAME_CONFIG.BOARD_SIZE;
+            const n = state.boardSize;
             state.board = Array.from({ length: n }, () => Array(n).fill(null));
             state.score = 0;
             state.playing = true;
@@ -1019,7 +1092,7 @@
             state.items.remote = { bomb: 1, col: 1, row: 1, reroll: 1 };
             state.stats.local = { cells: 0, lines: 0 };
             state.stats.remote = { cells: 0, lines: 0 };
-            setToast('3 個方塊全部用完才會補新的一批！');
+            setToast(`${n}×${n} 棋盤開局！3 塊用完才補新一批。`);
         }
 
         function hostStart() {
@@ -1031,6 +1104,7 @@
 
         function snapshot() {
             return {
+                boardSize: state.boardSize,
                 board: state.board,
                 score: state.score,
                 over: state.over,
@@ -1043,6 +1117,7 @@
         }
 
         function applySnap(s) {
+            state.boardSize = ensureValidBoardSize(s.boardSize);
             state.board = s.board;
             state.score = s.score;
             state.over = s.over;
@@ -1083,7 +1158,7 @@
 
         function canFit(mat, r0, c0) {
             if (!mat) return false;
-            const n = GAME_CONFIG.BOARD_SIZE;
+            const n = state.boardSize;
             for (let r = 0; r < mat.length; r++) {
                 for (let c = 0; c < mat[r].length; c++) {
                     if (!mat[r][c]) continue;
@@ -1093,6 +1168,17 @@
                 }
             }
             return true;
+        }
+
+        function canPiecePlaceAnywhere(piece) {
+            if (!piece || !piece.matrix) return false;
+            const n = state.boardSize;
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    if (canFit(piece.matrix, r, c)) return true;
+                }
+            }
+            return false;
         }
 
         function tryPlace(idx, r0, c0) {
@@ -1145,7 +1231,6 @@
             }
             state.stats[who].cells += count;
 
-            // 用掉就移除；3 個全為 null（用完）才補新的一批
             state.hands[who][idx] = null;
             if (state.hands[who].every(p => p === null)) {
                 state.hands[who] = newBatch();
@@ -1163,7 +1248,7 @@
         }
 
         function clearFullLines(who) {
-            const n = GAME_CONFIG.BOARD_SIZE;
+            const n = state.boardSize;
             const rows = [];
             const cols = [];
             for (let r = 0; r < n; r++) {
@@ -1224,13 +1309,12 @@
 
             state.armedTool = state.armedTool === tool ? null : tool;
             state.pickedSlot = null;
-            state.hoverPos = null;
             renderItems();
             renderHand();
             renderBoard();
             if (state.armedTool) {
                 safeSound('good');
-                setToast(`${ITEMS[tool].icon} 已啟動「${ITEMS[tool].name}」，請點棋盤目標格！`, true);
+                setToast(`${ITEMS[tool].icon} 移動到棋盤可預覽清除範圍，點選即可引爆！`, true);
             } else {
                 setToast('已取消道具');
             }
@@ -1265,7 +1349,7 @@
                     setToast('🔄 已重新抽取整批 3 個方塊！', true);
                 }
             } else {
-                const n = GAME_CONFIG.BOARD_SIZE;
+                const n = state.boardSize;
                 let cleared = 0;
                 if (tool === 'bomb') {
                     for (let dr = -1; dr <= 1; dr++) {
@@ -1298,23 +1382,18 @@
             syncAll();
         }
 
-        function canMove(hand, bag) {
-            const n = GAME_CONFIG.BOARD_SIZE;
-            for (const p of hand) {
-                if (!p) continue;
-                for (let r = 0; r < n; r++) {
-                    for (let c = 0; c < n; c++) {
-                        if (canFit(p.matrix, r, c)) return true;
-                    }
-                }
-            }
-            return (bag.bomb || 0) > 0 || (bag.col || 0) > 0 || (bag.row || 0) > 0;
+        // 只要所有方塊都無法放入棋盤任何空位即判定結束（雙人則雙方方塊皆無可放位置）
+        function hasAnyPlaceableHand(hand) {
+            return hand.some(p => p && canPiecePlaceAnywhere(p));
         }
 
         function checkEnd() {
-            const a = canMove(state.hands.local, state.items.local);
-            const b = state.mode === 'multiplayer' ? canMove(state.hands.remote, state.items.remote) : false;
-            if (!a && !b) {
+            const localCanPlace = hasAnyPlaceableHand(state.hands.local);
+            const remoteCanPlace = state.mode === 'multiplayer'
+                ? hasAnyPlaceableHand(state.hands.remote)
+                : false;
+
+            if (!localCanPlace && !remoteCanPlace) {
                 state.over = true;
                 const isNew = safeSaveScore(state.score);
                 openGameOver(isNew);
@@ -1355,10 +1434,10 @@
         }
 
         function buildBoard() {
-            if (boardBuilt) return;
-            const n = GAME_CONFIG.BOARD_SIZE;
+            const n = state.boardSize;
+            if (builtBoardSize === n) return;
             const el = document.getElementById('board-el');
-            el.style.gridTemplateColumns = `repeat(${n}, auto)`;
+            el.style.gridTemplateColumns = `repeat(${n}, var(--cell-size, 32px))`;
             el.innerHTML = '';
 
             for (let r = 0; r < n; r++) {
@@ -1380,12 +1459,12 @@
                 state.hoverPos = null;
                 clearPreview();
             });
-            boardBuilt = true;
+            builtBoardSize = n;
         }
 
         function renderBoard() {
             buildBoard();
-            const n = GAME_CONFIG.BOARD_SIZE;
+            const n = state.boardSize;
             const aiming = !!(state.armedTool && state.armedTool !== 'reroll');
 
             for (let r = 0; r < n; r++) {
@@ -1410,20 +1489,44 @@
 
         function clearPreview() {
             document.querySelectorAll('#board-el .cell').forEach(el => {
-                el.classList.remove('ok-preview', 'bad-preview');
+                el.classList.remove('ok-preview', 'bad-preview', 'tool-blast-preview');
             });
         }
 
         function drawPreview() {
             clearPreview();
-            if (!state.hoverPos || state.pickedSlot === null) return;
+            if (!state.hoverPos) return;
+            const { r: r0, c: c0 } = state.hoverPos;
+            const n = state.boardSize;
+
+            // 道具清除範圍預覽
+            if (state.armedTool && ['bomb', 'col', 'row'].includes(state.armedTool)) {
+                const coords = [];
+                if (state.armedTool === 'bomb') {
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            const nr = r0 + dr, nc = c0 + dc;
+                            if (nr >= 0 && nr < n && nc >= 0 && nc < n) coords.push([nr, nc]);
+                        }
+                    }
+                } else if (state.armedTool === 'col') {
+                    for (let nr = 0; nr < n; nr++) coords.push([nr, c0]);
+                } else if (state.armedTool === 'row') {
+                    for (let nc = 0; nc < n; nc++) coords.push([r0, nc]);
+                }
+                coords.forEach(([rr, cc]) => {
+                    const target = document.querySelector(`#board-el .cell[data-r="${rr}"][data-c="${cc}"]`);
+                    if (target) target.classList.add('tool-blast-preview');
+                });
+                return;
+            }
+
+            // 方塊放置預覽
+            if (state.pickedSlot === null) return;
             const p = state.hands.local[state.pickedSlot];
             if (!p) return;
 
-            const { r: r0, c: c0 } = state.hoverPos;
             const ok = canFit(p.matrix, r0, c0);
-            const n = GAME_CONFIG.BOARD_SIZE;
-
             for (let r = 0; r < p.matrix.length; r++) {
                 for (let c = 0; c < p.matrix[r].length; c++) {
                     if (!p.matrix[r][c]) continue;
@@ -1442,8 +1545,14 @@
 
             state.hands.local.forEach((p, idx) => {
                 const slot = document.createElement('div');
+                const isEmpty = !p;
+                const canPut = p ? canPiecePlaceAnywhere(p) : true;
                 const isPicked = state.pickedSlot === idx && !!p;
-                slot.className = 'slot' + (!p ? ' empty' : '') + (isPicked ? ' picked' : '');
+
+                slot.className = 'slot'
+                    + (isEmpty ? ' empty' : '')
+                    + (!isEmpty && !canPut ? ' unplaceable' : '')
+                    + (isPicked ? ' picked' : '');
 
                 if (p) {
                     const cols = p.matrix[0].length;
@@ -1516,27 +1625,34 @@
             return { x, y: y - off };
         }
 
+        // 浮動方塊與瞄準點同步偏移，避免方塊本體與預覽位置錯開
         function showGhost(piece, x, y) {
             const g = document.getElementById('ghost-el');
             const pt = aimPoint(x, y);
+            const cellPx = computeCellSize(state.boardSize);
             const cols = piece.matrix[0].length;
+            const rows = piece.matrix.length;
+            const totalW = cols * (cellPx + 2);
+            const totalH = rows * (cellPx + 2);
+
             g.style.display = 'grid';
-            g.style.gridTemplateColumns = `repeat(${cols}, 22px)`;
+            g.style.gridTemplateColumns = `repeat(${cols}, ${cellPx}px)`;
             g.style.gap = '2px';
-            g.style.left = (pt.x - (cols * 24) / 2) + 'px';
-            g.style.top = (pt.y - (piece.matrix.length * 24) / 2) + 'px';
+            g.style.left = (pt.x - totalW / 2) + 'px';
+            g.style.top = (pt.y - totalH / 2) + 'px';
             g.innerHTML = '';
 
             piece.matrix.forEach(row => {
                 row.forEach(cell => {
                     const d = document.createElement('div');
-                    d.style.width = '22px';
-                    d.style.height = '22px';
+                    d.style.width = cellPx + 'px';
+                    d.style.height = cellPx + 'px';
                     d.style.borderRadius = '4px';
                     d.style.display = 'flex';
                     d.style.alignItems = 'center';
                     d.style.justifyContent = 'center';
-                    d.style.fontSize = '0.8rem';
+                    d.style.fontSize = Math.max(10, Math.floor(cellPx * 0.5)) + 'px';
+                    d.style.color = '#fff';
                     if (cell) {
                         d.style.backgroundColor = profile.color;
                         if (cell.item) d.textContent = ITEMS[cell.item].icon;
