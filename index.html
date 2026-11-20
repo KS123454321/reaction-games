@@ -131,11 +131,12 @@
         <p class="subtitle">點選下方大卡片，隨時隨地動動腦、練反應！</p>
     </header>
 
-    <!-- 分類按鈕（未來新增數學、中文遊戲時自動分類） -->
+    <!-- 分類按鈕 -->
     <div class="filter-bar" id="filter-bar">
         <button class="filter-btn active" onclick="filterGames('all', this)">🌟 全部遊戲</button>
         <button class="filter-btn" onclick="filterGames('reaction', this)">⚡ 反應力訓練</button>
         <button class="filter-btn" onclick="filterGames('brain', this)">🧠 腦力訓練</button>
+        <button class="filter-btn" onclick="filterGames('multiplayer', this)">🌐 連線競賽</button>
     </div>
 
     <!-- 遊戲卡片自動生成區 -->
@@ -150,7 +151,7 @@
                 id: 'mole',                 // 對應 localStorage 的 best_mole
                 title: '夜市打地鼠',
                 icon: '🐹',
-                category: 'reaction',       // reaction (反應) 或 brain (數學/語文)
+                category: 'reaction',       // reaction / brain / multiplayer
                 tag: '手眼協調',
                 desc: '看到地鼠就快點！小心不要打到戴安全帽的地鼠喔！',
                 url: 'whack-a-mole.html'
@@ -192,46 +193,32 @@
                 url: 'catch-gold.html'
             },
             {
-				id: 'monkey',
-				title: '猴子架橋過河',
-				icon: '🐒',
-				category: 'brain', // 如果你的分類有「益智/邏輯」，也可改成對應的分類名稱（如 'all' 或 'reaction'）
-				tag: '益智判斷',
-				desc: '旋轉草地島嶼方塊拼出橋樑，幫小猴子順利過河吃香蕉！',
-				url: 'monkey-bridge.html'
-			},
-			
-			{
-        id: 'cat',
-        title: '貓咪過河',
-        icon: '🐱',
-        category: 'brain', // 請依照你首頁分類名稱填寫（例如 'logic' 或 'all'）
-		tag: '益智判斷',
-        desc: '在16大格斜角河道放置九宮格島嶼，用最少步數幫貓咪吃到對岸美食！',
-        url: 'cat-bridge.html'
-			}	
-			
-            // 👇 未來要加入你原本的數學或中文遊戲時，把下面這兩段取消註解並修改檔名即可！
-            /*
-            ,{
-                id: 'math',
-                title: '趣味算術挑戰',
-                icon: '🔢',
+                id: 'monkey',
+                title: '猴子架橋過河',
+                icon: '🐒',
                 category: 'brain',
-                tag: '算術腦力',
-                desc: '挑戰加減乘除心算速度，越算越靈活！',
-                url: 'math-game.html'
+                tag: '益智判斷',
+                desc: '旋轉草地島嶼方塊拼出橋樑，幫小猴子順利過河吃香蕉！',
+                url: 'monkey-bridge.html'
             },
             {
-                id: 'chinese',
-                title: '中文文字大挑戰',
-                icon: '🀄',
+                id: 'cat',
+                title: '貓咪過河',
+                icon: '🐱',
                 category: 'brain',
-                tag: '語文聯想',
-                desc: '認識國字與成語趣味問答，全家一起動動腦！',
-                url: 'chinese-game.html'
+                tag: '益智判斷',
+                desc: '在16大格斜角河道放置九宮格島嶼，用最少步數幫貓咪吃到對岸美食！',
+                url: 'cat-bridge.html'
+            },
+            {
+                id: 'coop_blocks',
+                title: '合作方塊拼圖',
+                icon: '🧩',
+                category: 'multiplayer',
+                tag: '單人 / 雙人合作',
+                desc: '支援單人挑戰或輸入房號與親友即時連線合作，擺放方塊連線消除拿道具！',
+                url: 'coop-blocks.html'
             }
-            */
         ];
 
         // 自動渲染卡片的函式
@@ -239,8 +226,8 @@
             const grid = document.getElementById('game-grid');
             grid.innerHTML = '';
 
-            const filtered = filterCategory === 'all' 
-                ? GAMES_CONFIG 
+            const filtered = filterCategory === 'all'
+                ? GAMES_CONFIG
                 : GAMES_CONFIG.filter(g => g.category === filterCategory);
 
             filtered.forEach(game => {

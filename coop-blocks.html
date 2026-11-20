@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>合作方塊拼圖 - 全齡益智與反應遊樂園</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="common.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
+    <style id="page-override">
+        :root {
+            --bg-page: #f4f6f9;
+            --bg-card: #ffffff;
+            --bg-sub: #eef2f6;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-line: #d1d5db;
+        }
+        html[data-theme="dark"],
+        body[data-theme="dark"],
+        [data-theme="dark"] {
+            --bg-page: #0f172a;
+            --bg-card: #1e293b;
+            --bg-sub: #0b1220;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-line: #334155;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: var(--bg-page) !important;
+            color: var(--text-primary) !important;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+            box-sizing: border-box;
+        }
+
+        body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            touch-action: manipulation;
+        }
+
+        .top-bar {
+            width: 100%;
+            max-width: 1020px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .top-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-ui {
+            padding: 8px 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            border: 2px solid var(--border-line);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .btn-ui:active {
+            transform: scale(0.97);
+        }
+
+        .card-panel {
+            width: 100%;
+            max-width: 780px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            border-radius: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .muted {
+            color: var(--text-secondary);
+        }
+
+        .profile-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin: 14px 0;
+            padding: 12px;
+            border-radius: 14px;
+            background: var(--bg-sub);
+        }
+
+        .name-input {
+            padding: 8px 12px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 2px solid var(--border-line);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            min-width: 150px;
+        }
+
+        .swatch-row {
+            display: inline-flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            vertical-align: middle;
+        }
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.12s ease;
+        }
+        .color-swatch.selected {
+            border-color: var(--text-primary);
+            transform: scale(1.15);
+            box-shadow: 0 0 0 2px var(--bg-card);
+        }
+
+        .mode-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+            margin: 14px 0;
+        }
+        .mode-btn-card {
+            background: var(--bg-sub);
+            border: 2px solid var(--border-line);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: left;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .mode-btn-card:hover {
+            transform: translateY(-2px);
+            border-color: #2563eb;
+        }
+        .mode-btn-card h3 {
+            margin: 0 0 6px 0;
+            font-size: 1.2rem;
+        }
+        .mode-btn-card p {
+            margin: 0;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        .sub-box {
+            background: var(--bg-sub);
+            border: 2px dashed var(--border-line);
+            border-radius: 14px;
+            padding: 14px;
+            margin-top: 12px;
+        }
+        .code-pill {
+            display: inline-block;
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            margin: 4px 8px 4px 0;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+            margin: 12px 0;
+        }
+        .player-tag {
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            border-left: 6px solid #2563eb;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+        }
+
+        .btn-blue {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-green {
+            background: #16a34a;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-blue:disabled, .btn-green:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* 遊戲區 */
+        .game-wrap {
+            width: 100%;
+            max-width: 1040px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .hud {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            border-radius: 16px;
+            padding: 10px 14px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            box-sizing: border-box;
+        }
+        .status-pill {
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.15);
+            color: #2563eb;
+        }
+        [data-theme="dark"] .status-pill {
+            color: #93c5fd;
+        }
+        .status-pill.flash {
+            background: rgba(245, 158, 11, 0.25);
+            color: #b45309;
+        }
+        [data-theme="dark"] .status-pill.flash {
+            color: #fbbf24;
+        }
+
+        .game-main {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .board-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            padding: 8px;
+            border-radius: 16px;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .board {
+            display: grid;
+            gap: 2px;
+            user-select: none;
+        }
+        .cell {
+            width: 28px;
+            height: 28px;
+            border-radius: 5px;
+            background-color: var(--bg-sub);
+            border: 1px solid var(--border-line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            box-sizing: border-box;
+        }
+        @media (max-width: 520px) {
+            .cell {
+                width: calc((100vw - 56px) / 14);
+                height: calc((100vw - 56px) / 14);
+                max-width: 24px;
+                max-height: 24px;
+                border-radius: 4px;
+                font-size: 0.68rem;
+            }
+        }
+        .cell.filled {
+            border-color: rgba(255, 255, 255, 0.5);
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+        }
+        .cell.ok-preview {
+            outline: 2.5px solid #10b981;
+            filter: brightness(1.15);
+            z-index: 2;
+        }
+        .cell.bad-preview {
+            outline: 2.5px solid #ef4444;
+            background-color: rgba(239, 68, 68, 0.35) !important;
+            z-index: 2;
+        }
+        .cell.aim-cell {
+            outline: 2px dashed #f59e0b;
+            cursor: crosshair;
+        }
+
+        .side-box {
+            flex: 1 1 280px;
+            max-width: 380px;
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-line);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-sizing: border-box;
+        }
+
+        .hand-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .slot {
+            min-height: 84px;
+            background: var(--bg-sub);
+            border: 2px solid var(--border-line);
+            border-radius: 12px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+        }
+        .slot.empty {
+            opacity: 0.35;
+            border-style: dashed;
+            cursor: default;
+        }
+        .slot.picked {
+            border-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+        }
+        .mini {
+            display: grid;
+            gap: 2px;
+            pointer-events: none;
+        }
+        .mini-sq {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.62rem;
+            color: #fff;
+        }
+
+        .items-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .item-card-btn {
+            padding: 9px 10px;
+            border-radius: 10px;
+            border: 2px solid var(--border-line);
+            background: var(--bg-sub);
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-card-btn.armed {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.25);
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+        }
+        .item-card-btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        .offset-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-sub);
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .offset-check input {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+            opacity: 0.9;
+        }
+
+        .modal-bg {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .modal-box {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-line);
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="top-group">
+            <button type="button" class="btn-ui" id="btn-home">🏠 回首頁</button>
+            <button type="button" class="btn-ui hidden" id="btn-lobby-back">🚪 離開/換模式</button>
+        </div>
+        <div class="top-group">
+            <button type="button" class="btn-ui" id="btn-theme">🌓 切換模式</button>
+        </div>
+    </div>
+
+    <!-- 大廳畫面 -->
+    <div id="lobby-view" class="card-panel">
+        <h1 style="margin: 0 0 6px 0; font-size: 1.8rem;">🧩 合作方塊拼圖</h1>
+        <p class="muted" style="margin: 0;">支援單人挑戰或雙人即時連線合作，一次出 3 個方塊、用完才補新一批。</p>
+
+        <div class="profile-box">
+            <label>
+                <strong>玩家名稱：</strong>
+                <input type="text" id="input-name" class="name-input" maxlength="12" placeholder="輸入名稱">
+            </label>
+            <div>
+                <strong>代表顏色：</strong>
+                <div id="swatch-list" class="swatch-row"></div>
+            </div>
+        </div>
+
+        <label class="offset-check" style="margin-bottom: 12px;">
+            <input type="checkbox" id="chk-offset-lobby">
+            <span>📱 手機觸控「上方偏移瞄準」（防手指遮擋，預設啟動，兩位玩家各自獨立控制）</span>
+        </label>
+
+        <div class="mode-cards">
+            <button type="button" class="mode-btn-card" id="btn-start-solo">
+                <h3>👤 單人模式</h3>
+                <p>立即開始個人挑戰，挑戰單人最高紀錄。</p>
+            </button>
+            <button type="button" class="mode-btn-card" id="btn-create-room">
+                <h3>🏠 建立雙人房間</h3>
+                <p>產生房間代碼與分享連結，邀請好友連線合作。</p>
+            </button>
+            <button type="button" class="mode-btn-card" id="btn-focus-join">
+                <h3>🔗 加入雙人房間</h3>
+                <p>輸入房號與房主連線進入等待區。</p>
+            </button>
+        </div>
+
+        <div class="sub-box">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                <input type="text" id="input-room-code" class="name-input" maxlength="8" placeholder="輸入房號（例：A2B4C）" style="text-transform: uppercase;">
+                <button type="button" class="btn-blue" id="btn-join-room">加入房間</button>
+            </div>
+            <div id="lobby-msg" class="muted" style="margin-top: 8px; font-size: 0.95rem;"></div>
+        </div>
+
+        <div id="waiting-box" class="sub-box hidden">
+            <div>
+                <strong>房間代碼：</strong>
+                <span id="room-code-text" class="code-pill">-----</span>
+                <button type="button" class="btn-ui" id="btn-copy-code">📋 複製房號</button>
+                <button type="button" class="btn-ui" id="btn-copy-link">🔗 複製連結</button>
+            </div>
+            <div id="conn-msg" class="muted" style="margin-top: 6px; font-size: 0.95rem;">等待連線中...</div>
+            <div id="players-list" class="players-grid"></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn-blue" id="btn-ready">✅ 準備完成</button>
+                <button type="button" class="btn-green hidden" id="btn-start-mp" disabled>🚀 開始遊戲</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-view" class="game-wrap hidden">
+        <div class="hud">
+            <div>
+                <strong id="mode-badge" style="margin-right: 10px;"></strong>
+                <span style="font-size: 1.2rem; font-weight: 900;">🏆 分數：<span id="hud-score">0</span></span>
+                <span class="muted" style="margin-left: 10px; font-weight: 700;">最高：<span id="hud-best">0</span></span>
+            </div>
+            <div id="hud-toast" class="status-pill">點選或拖曳方塊放到棋盤上！</div>
+        </div>
+
+        <div class="game-main">
+            <div class="board-card">
+                <div id="board-el" class="board"></div>
+            </div>
+
+            <div class="side-box">
+                <div>
+                    <div style="font-weight: 700; margin-bottom: 8px;">🧱 待選方塊（3 塊用完才補新一批）</div>
+                    <div id="hand-el" class="hand-row"></div>
+                </div>
+
+                <label class="offset-check">
+                    <input type="checkbox" id="chk-offset-game">
+                    <span>📱 觸控上方偏移瞄準（防遮擋）</span>
+                </label>
+
+                <div>
+                    <div style="font-weight: 700; margin-bottom: 8px;">🎒 道具背包（點選後立即瞄準，再點棋盤）</div>
+                    <div id="items-el" class="items-row"></div>
+                    <button type="button" class="btn-ui hidden" id="btn-cancel-item" style="width: 100%; margin-top: 8px;">✖ 取消道具</button>
+                </div>
+
+                <div id="mate-box" class="muted hidden" style="font-size: 0.9rem; border-top: 1px solid var(--border-line); padding-top: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ghost-el" class="ghost"></div>
+
+    <div id="gameover-modal" class="modal-bg">
+        <div class="modal-box">
+            <h2 style="margin-top: 0;">🎉 遊戲結束！</h2>
+            <p id="final-score" style="font-size: 1.45rem; font-weight: 900; margin: 10px 0;"></p>
+            <p id="record-flag" class="hidden" style="color: #16a34a; font-weight: 700;">🌟 刷新最高紀錄！</p>
+            <p id="final-stats" class="muted" style="font-size: 0.95rem;"></p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+                <button type="button" class="btn-green" id="btn-replay">🔄 再玩一局</button>
+                <button type="button" class="btn-ui" id="btn-modal-lobby">🏠 回到大廳</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAME_CONFIG = {
+            BOARD_SIZE: 9,
+            HAND_SIZE: 3,
+            ITEM_DROP_RATE: 0.14,
+            ITEM_WEIGHTS: {
+                bomb: 30,
+                col: 25,
+                row: 25,
+                reroll: 20
+            },
+            TOUCH_OFFSET_Y: 92,
+            LINE_BASE_SCORE: 100,
+            ITEM_CELL_BONUS: 30,
+            ITEM_CLEAR_PER_CELL: 5
+        };
+
+        const PALETTE = [
+            { name: '珊瑚紅', hex: '#e11d48' },
+            { name: '海洋藍', hex: '#0284c7' },
+            { name: '翡翠綠', hex: '#059669' },
+            { name: '琥珀橘', hex: '#d97706' },
+            { name: '紫羅蘭', hex: '#7c3aed' },
+            { name: '青提色', hex: '#0d9488' }
+        ];
+
+        const SHAPES = [
+            [[1]],
+            [[1, 1]], [[1], [1]],
+            [[1, 1, 1]], [[1], [1], [1]],
+            [[1, 0], [1, 1]], [[0, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]],
+            [[1, 1], [1, 1]],
+            [[1, 1, 1, 1]], [[1], [1], [1], [1]],
+            [[1, 1, 0], [0, 1, 1]], [[0, 1, 1], [1, 1, 0]],
+            [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]],
+            [[1, 1, 1], [0, 1, 0]], [[0, 1, 0], [1, 1, 1]],
+            [[1, 1, 1, 1, 1]], [[1], [1], [1], [1], [1]],
+            [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
+            [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+        ];
+
+        const ITEMS = {
+            bomb:   { icon: '💣', name: '範圍炸彈' },
+            col:    { icon: '⚡', name: '消除直排' },
+            row:    { icon: '🌊', name: '消除橫排' },
+            reroll: { icon: '🔄', name: '換塊重抽' }
+        };
+
+        const KEYS = {
+            name: 'coop_blocks_name',
+            color: 'coop_blocks_color',
+            offset: 'coop_blocks_offset'
+        };
+
+        const profile = {
+            name: localStorage.getItem(KEYS.name) || '玩家',
+            color: localStorage.getItem(KEYS.color) || PALETTE[1].hex,
+            offset: localStorage.getItem(KEYS.offset) === null
+                ? true
+                : localStorage.getItem(KEYS.offset) === 'true'
+        };
+
+        const state = {
+            mode: 'solo',
+            isHost: true,
+            playing: false,
+            over: false,
+            score: 0,
+            board: [],
+            hands: { local: [], remote: [] },
+            items: {
+                local: { bomb: 1, col: 1, row: 1, reroll: 1 },
+                remote: { bomb: 1, col: 1, row: 1, reroll: 1 }
+            },
+            stats: {
+                local: { cells: 0, lines: 0 },
+                remote: { cells: 0, lines: 0 }
+            },
+            pickedSlot: null,
+            armedTool: null,
+            hoverPos: null,
+            ready: false,
+            mate: { name: '隊友', color: PALETTE[0].hex, ready: false }
+        };
+
+        let peer = null;
+        let conn = null;
+        let roomCode = '';
+        let boardBuilt = false;
+
+        function safeSound(type) {
+            try {
+                if (typeof playSound === 'function') playSound(type);
+            } catch (_) {}
+        }
+
+        function safeSaveScore(score) {
+            try {
+                if (typeof saveHighScore === 'function') {
+                    return saveHighScore('coop_blocks', score);
+                }
+            } catch (_) {}
+            const prev = parseInt(localStorage.getItem('best_coop_blocks') || '0', 10);
+            if (score > prev) {
+                localStorage.setItem('best_coop_blocks', String(score));
+                return true;
+            }
+            return false;
+        }
+
+        function onToggleTheme() {
+            const cur = document.documentElement.getAttribute('data-theme');
+            const next = cur === 'dark' ? 'light' : 'dark';
+            if (next === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.body.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                document.body.removeAttribute('data-theme');
+            }
+            localStorage.setItem('site_theme', next);
+        }
+
+        function onGoHome() {
+            const active = !!(state.playing && !state.over);
+            if (active && !confirm('遊戲還在進行中，確定要回到首頁嗎？')) return;
+            window.location.href = 'index.html';
+        }
+
+        function setOffset(val) {
+            profile.offset = !!val;
+            localStorage.setItem(KEYS.offset, String(profile.offset));
+            document.getElementById('chk-offset-lobby').checked = profile.offset;
+            document.getElementById('chk-offset-game').checked = profile.offset;
+            drawPreview();
+        }
+
+        function setToast(msg, flash = false) {
+            const el = document.getElementById('hud-toast');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.toggle('flash', !!flash);
+        }
+
+        function initLobby() {
+            const nameEl = document.getElementById('input-name');
+            nameEl.value = profile.name;
+            nameEl.addEventListener('input', () => {
+                profile.name = nameEl.value.trim() || '玩家';
+                localStorage.setItem(KEYS.name, profile.name);
+                sendData({ type: 'profile', profile: publicProfile() });
+                renderPlayers();
+            });
+
+            const swatchBox = document.getElementById('swatch-list');
+            swatchBox.innerHTML = '';
+            PALETTE.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'color-swatch' + (profile.color === item.hex ? ' selected' : '');
+                btn.style.backgroundColor = item.hex;
+                btn.title = item.name;
+                btn.addEventListener('click', () => {
+                    profile.color = item.hex;
+                    localStorage.setItem(KEYS.color, profile.hex);
+                    document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    sendData({ type: 'profile', profile: publicProfile() });
+                    renderPlayers();
+                    if (state.playing) renderHand();
+                });
+                swatchBox.appendChild(btn);
+            });
+
+            document.getElementById('chk-offset-lobby').checked = profile.offset;
+            document.getElementById('chk-offset-game').checked = profile.offset;
+            document.getElementById('chk-offset-lobby').addEventListener('change', e => setOffset(e.target.checked));
+            document.getElementById('chk-offset-game').addEventListener('change', e => setOffset(e.target.checked));
+
+            document.getElementById('btn-theme').addEventListener('click', onToggleTheme);
+            document.getElementById('btn-home').addEventListener('click', onGoHome);
+            document.getElementById('btn-lobby-back').addEventListener('click', backToLobby);
+            document.getElementById('btn-modal-lobby').addEventListener('click', backToLobby);
+            document.getElementById('btn-start-solo').addEventListener('click', startSolo);
+            document.getElementById('btn-create-room').addEventListener('click', createRoom);
+            document.getElementById('btn-focus-join').addEventListener('click', () => {
+                const inp = document.getElementById('input-room-code');
+                inp.focus();
+                inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+            document.getElementById('btn-join-room').addEventListener('click', joinRoom);
+            document.getElementById('btn-copy-code').addEventListener('click', () => {
+                navigator.clipboard?.writeText(roomCode);
+                document.getElementById('lobby-msg').textContent = `已複製房號：${roomCode}`;
+            });
+            document.getElementById('btn-copy-link').addEventListener('click', () => {
+                const u = new URL(window.location.href);
+                u.searchParams.set('room', roomCode);
+                navigator.clipboard?.writeText(u.toString());
+                document.getElementById('lobby-msg').textContent = '已複製分享連結！';
+            });
+            document.getElementById('btn-ready').addEventListener('click', toggleReady);
+            document.getElementById('btn-start-mp').addEventListener('click', hostStart);
+            document.getElementById('btn-cancel-item').addEventListener('click', () => {
+                state.armedTool = null;
+                renderItems();
+                renderBoard();
+                setToast('已取消道具');
+            });
+            document.getElementById('btn-replay').addEventListener('click', replayMatch);
+
+            const qRoom = new URLSearchParams(window.location.search).get('room');
+            if (qRoom) {
+                document.getElementById('input-room-code').value = qRoom.toUpperCase();
+                document.getElementById('lobby-msg').textContent = `已帶入房號 ${qRoom.toUpperCase()}，點擊「加入房間」即可連線。`;
+            }
+        }
+
+        function publicProfile() {
+            return { name: profile.name, color: profile.color, ready: state.ready };
+        }
+
+        function startSolo() {
+            closePeer();
+            state.mode = 'solo';
+            state.isHost = true;
+            resetMatch();
+            showGame();
+        }
+
+        function makeCode(len = 5) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let s = '';
+            for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+            return s;
+        }
+
+        function createRoom() {
+            if (typeof Peer === 'undefined') {
+                document.getElementById('lobby-msg').textContent = '連線元件載入中或網路受限，請稍後再試，或先使用單人模式。';
+                return;
+            }
+            closePeer();
+            state.mode = 'multiplayer';
+            state.isHost = true;
+            state.ready = false;
+            roomCode = makeCode(5);
+
+            document.getElementById('waiting-box').classList.remove('hidden');
+            document.getElementById('room-code-text').textContent = roomCode;
+            document.getElementById('btn-start-mp').classList.remove('hidden');
+            document.getElementById('btn-start-mp').disabled = true;
+            document.getElementById('conn-msg').textContent = '建立房間中，等待訪客加入...';
+            renderPlayers();
+
+            peer = new Peer('coopblk-' + roomCode);
+            peer.on('open', () => {
+                document.getElementById('conn-msg').textContent = '房間已建立！請分享房號或連結。';
+            });
+            peer.on('connection', c => {
+                conn = c;
+                bindConn();
+            });
+            peer.on('error', err => {
+                document.getElementById('conn-msg').textContent = '連線提示：' + (err.type || err);
+            });
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('input-room-code').value.trim().toUpperCase();
+            if (!code) {
+                document.getElementById('lobby-msg').textContent = '請先輸入房間代碼！';
+                return;
+            }
+            if (typeof Peer === 'undefined') {
+                document.getElementById('lobby-msg').textContent = '連線元件尚未就緒，請稍後再試。';
+                return;
+            }
+            closePeer();
+            state.mode = 'multiplayer';
+            state.isHost = false;
+            state.ready = false;
+            roomCode = code;
+
+            document.getElementById('waiting-box').classList.remove('hidden');
+            document.getElementById('room-code-text').textContent = roomCode;
+            document.getElementById('btn-start-mp').classList.add('hidden');
+            document.getElementById('conn-msg').textContent = '正在連線至房主...';
+            renderPlayers();
+
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect('coopblk-' + roomCode, { reliable: true });
+                bindConn();
+            });
+            peer.on('error', err => {
+                document.getElementById('conn-msg').textContent = '加入失敗：' + (err.type || err);
+            });
+        }
+
+        function bindConn() {
+            conn.on('open', () => {
+                document.getElementById('conn-msg').textContent = '已與夥伴連線！雙方可按「準備完成」。';
+                sendData({ type: 'profile', profile: publicProfile() });
+            });
+            conn.on('data', handleData);
+            conn.on('close', () => {
+                setToast('⚠️ 連線已中斷', true);
+                document.getElementById('conn-msg').textContent = '夥伴已離開房間。';
+            });
+        }
+
+        function sendData(obj) {
+            if (conn && conn.open) conn.send(obj);
+        }
+
+        function toggleReady() {
+            state.ready = !state.ready;
+            document.getElementById('btn-ready').textContent = state.ready ? '↩ 取消準備' : '✅ 準備完成';
+            renderPlayers();
+            refreshStartBtn();
+            sendData({ type: 'ready', ready: state.ready });
+        }
+
+        function refreshStartBtn() {
+            if (!state.isHost) return;
+            const ok = !!(conn && conn.open && state.ready && state.mate.ready);
+            document.getElementById('btn-start-mp').disabled = !ok;
+        }
+
+        function renderPlayers() {
+            const box = document.getElementById('players-list');
+            const hostName = state.isHost ? profile.name : state.mate.name;
+            const hostColor = state.isHost ? profile.color : state.mate.color;
+            const hostReady = state.isHost ? state.ready : state.mate.ready;
+
+            const guestName = !state.isHost ? profile.name : state.mate.name;
+            const guestColor = !state.isHost ? profile.color : state.mate.color;
+            const guestReady = !state.isHost ? state.ready : state.mate.ready;
+
+            box.innerHTML = `
+                <div class="player-tag" style="border-left-color: ${hostColor}">
+                    <span>🏠 ${hostName}</span>
+                    <span>${hostReady ? '✅ 已準備' : '⏳ 未準備'}</span>
+                </div>
+                <div class="player-tag" style="border-left-color: ${guestColor}">
+                    <span>👤 ${guestName}</span>
+                    <span>${guestReady ? '✅ 已準備' : '⏳ 未準備'}</span>
+                </div>
+            `;
+        }
+
+        function closePeer() {
+            if (conn) { try { conn.close(); } catch (_) {} conn = null; }
+            if (peer) { try { peer.destroy(); } catch (_) {} peer = null; }
+        }
+
+        function backToLobby() {
+            document.getElementById('gameover-modal').style.display = 'none';
+            document.getElementById('game-view').classList.add('hidden');
+            document.getElementById('btn-lobby-back').classList.add('hidden');
+            document.getElementById('lobby-view').classList.remove('hidden');
+            state.playing = false;
+            state.over = false;
+        }
+
+        function showGame() {
+            document.getElementById('lobby-view').classList.add('hidden');
+            document.getElementById('gameover-modal').style.display = 'none';
+            document.getElementById('game-view').classList.remove('hidden');
+            document.getElementById('btn-lobby-back').classList.remove('hidden');
+
+            const isMp = state.mode === 'multiplayer';
+            document.getElementById('mode-badge').textContent = isMp ? '🤝 雙人合作' : '👤 單人模式';
+            const mateBox = document.getElementById('mate-box');
+            if (isMp) {
+                mateBox.classList.remove('hidden');
+                mateBox.innerHTML = `夥伴：<strong>${state.mate.name}</strong>`;
+            } else {
+                mateBox.classList.add('hidden');
+            }
+
+            buildBoard();
+            renderBoard();
+            renderHand();
+            renderItems();
+            updateHud();
+        }
+
+        function pickItem() {
+            const entries = Object.entries(GAME_CONFIG.ITEM_WEIGHTS);
+            const sum = entries.reduce((a, [, w]) => a + w, 0);
+            let r = Math.random() * sum;
+            for (const [k, w] of entries) {
+                r -= w;
+                if (r <= 0) return k;
+            }
+            return 'bomb';
+        }
+
+        function newPiece() {
+            const tpl = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            return {
+                matrix: tpl.map(row =>
+                    row.map(v => v ? { filled: true, item: Math.random() < GAME_CONFIG.ITEM_DROP_RATE ? pickItem() : null } : null)
+                )
+            };
+        }
+
+        function newBatch() {
+            return Array.from({ length: GAME_CONFIG.HAND_SIZE }, () => newPiece());
+        }
+
+        function resetMatch() {
+            const n = GAME_CONFIG.BOARD_SIZE;
+            state.board = Array.from({ length: n }, () => Array(n).fill(null));
+            state.score = 0;
+            state.playing = true;
+            state.over = false;
+            state.pickedSlot = null;
+            state.armedTool = null;
+            state.hoverPos = null;
+            state.hands.local = newBatch();
+            state.hands.remote = newBatch();
+            state.items.local = { bomb: 1, col: 1, row: 1, reroll: 1 };
+            state.items.remote = { bomb: 1, col: 1, row: 1, reroll: 1 };
+            state.stats.local = { cells: 0, lines: 0 };
+            state.stats.remote = { cells: 0, lines: 0 };
+            setToast('3 個方塊全部用完才會補新的一批！');
+        }
+
+        function hostStart() {
+            if (!state.isHost) return;
+            resetMatch();
+            showGame();
+            sendData({ type: 'snap', snap: snapshot() });
+        }
+
+        function snapshot() {
+            return {
+                board: state.board,
+                score: state.score,
+                over: state.over,
+                stats: state.stats,
+                hostHand: state.hands.local,
+                guestHand: state.hands.remote,
+                hostItems: state.items.local,
+                guestItems: state.items.remote
+            };
+        }
+
+        function applySnap(s) {
+            state.board = s.board;
+            state.score = s.score;
+            state.over = s.over;
+            state.stats = s.stats;
+            state.hands.local = s.guestHand;
+            state.hands.remote = s.hostHand;
+            state.items.local = s.guestItems;
+            state.items.remote = s.hostItems;
+            state.playing = true;
+            state.pickedSlot = null;
+            state.armedTool = null;
+            showGame();
+            if (state.over) openGameOver();
+        }
+
+        function handleData(msg) {
+            if (!msg || !msg.type) return;
+            if (msg.type === 'profile') {
+                state.mate = { ...state.mate, ...msg.profile };
+                renderPlayers();
+                refreshStartBtn();
+            } else if (msg.type === 'ready') {
+                state.mate.ready = !!msg.ready;
+                renderPlayers();
+                refreshStartBtn();
+            } else if (msg.type === 'snap') {
+                applySnap(msg.snap);
+            } else if (msg.type === 'toast') {
+                setToast(msg.text, true);
+            } else if (msg.type === 'place' && state.isHost) {
+                applyPlace('remote', msg.idx, msg.r, msg.c);
+            } else if (msg.type === 'item' && state.isHost) {
+                applyItem('remote', msg.tool, msg.r, msg.c);
+            } else if (msg.type === 'replay' && state.isHost) {
+                hostStart();
+            }
+        }
+
+        function canFit(mat, r0, c0) {
+            if (!mat) return false;
+            const n = GAME_CONFIG.BOARD_SIZE;
+            for (let r = 0; r < mat.length; r++) {
+                for (let c = 0; c < mat[r].length; c++) {
+                    if (!mat[r][c]) continue;
+                    const br = r0 + r, bc = c0 + c;
+                    if (br < 0 || br >= n || bc < 0 || bc >= n) return false;
+                    if (state.board[br][bc] !== null) return false;
+                }
+            }
+            return true;
+        }
+
+        function tryPlace(idx, r0, c0) {
+            if (!state.playing || state.over) return;
+            const piece = state.hands.local[idx];
+            if (!piece) return;
+
+            if (!canFit(piece.matrix, r0, c0)) {
+                safeSound('bad');
+                setToast('這個位置放不下喔！', true);
+                return;
+            }
+
+            if (state.mode === 'multiplayer' && !state.isHost) {
+                sendData({ type: 'place', idx, r: r0, c: c0 });
+                return;
+            }
+            applyPlace('local', idx, r0, c0);
+        }
+
+        function applyPlace(who, idx, r0, c0) {
+            const piece = state.hands[who][idx];
+            if (!piece || !canFit(piece.matrix, r0, c0)) {
+                if (who === 'local') {
+                    safeSound('bad');
+                    setToast('隊友搶先一步放這了！', true);
+                } else {
+                    sendData({ type: 'toast', text: '隊友搶先一步放這了！' });
+                }
+                if (state.mode === 'multiplayer' && state.isHost) {
+                    sendData({ type: 'snap', snap: snapshot() });
+                }
+                renderBoard();
+                renderHand();
+                return;
+            }
+
+            const col = who === 'local'
+                ? (state.isHost ? profile.color : state.mate.color)
+                : (state.isHost ? state.mate.color : profile.color);
+
+            let count = 0;
+            for (let r = 0; r < piece.matrix.length; r++) {
+                for (let c = 0; c < piece.matrix[r].length; c++) {
+                    const cell = piece.matrix[r][c];
+                    if (!cell) continue;
+                    state.board[r0 + r][c0 + c] = { color: col, item: cell.item || null };
+                    count++;
+                }
+            }
+            state.stats[who].cells += count;
+
+            // 用掉就移除；3 個全為 null（用完）才補新的一批
+            state.hands[who][idx] = null;
+            if (state.hands[who].every(p => p === null)) {
+                state.hands[who] = newBatch();
+            }
+
+            if (who === 'local') {
+                state.pickedSlot = null;
+                state.hoverPos = null;
+            }
+
+            safeSound('good');
+            clearFullLines(who);
+            checkEnd();
+            syncAll();
+        }
+
+        function clearFullLines(who) {
+            const n = GAME_CONFIG.BOARD_SIZE;
+            const rows = [];
+            const cols = [];
+            for (let r = 0; r < n; r++) {
+                if (state.board[r].every(cell => cell !== null)) rows.push(r);
+            }
+            for (let c = 0; c < n; c++) {
+                let full = true;
+                for (let r = 0; r < n; r++) {
+                    if (state.board[r][c] === null) { full = false; break; }
+                }
+                if (full) cols.push(c);
+            }
+
+            const lines = rows.length + cols.length;
+            if (!lines) return;
+
+            const targets = new Set();
+            rows.forEach(r => { for (let c = 0; c < n; c++) targets.add(`${r},${c}`); });
+            cols.forEach(c => { for (let r = 0; r < n; r++) targets.add(`${r},${c}`); });
+
+            const got = [];
+            let itemCells = 0;
+            targets.forEach(key => {
+                const [r, c] = key.split(',').map(Number);
+                const cell = state.board[r][c];
+                if (cell && cell.item) {
+                    state.items[who][cell.item] = (state.items[who][cell.item] || 0) + 1;
+                    got.push(ITEMS[cell.item].icon);
+                    itemCells++;
+                }
+                state.board[r][c] = null;
+            });
+
+            const pts = lines * GAME_CONFIG.LINE_BASE_SCORE + (lines > 1 ? (lines - 1) * 50 : 0) + itemCells * GAME_CONFIG.ITEM_CELL_BONUS;
+            state.score += pts;
+            state.stats[who].lines += lines;
+            safeSound('clear');
+
+            const text = got.length
+                ? `✨ 消除 ${lines} 排（+${pts} 分）並獲得 ${got.join(' ')}！`
+                : `✨ 消除 ${lines} 排（+${pts} 分）！`;
+            if (who === 'local') setToast(text, true);
+            else sendData({ type: 'toast', text });
+        }
+
+        function clickTool(tool) {
+            if (!state.playing || state.over) return;
+            if ((state.items.local[tool] || 0) <= 0) return;
+
+            if (tool === 'reroll') {
+                if (state.mode === 'multiplayer' && !state.isHost) {
+                    sendData({ type: 'item', tool: 'reroll', r: 0, c: 0 });
+                } else {
+                    applyItem('local', 'reroll', 0, 0);
+                }
+                return;
+            }
+
+            state.armedTool = state.armedTool === tool ? null : tool;
+            state.pickedSlot = null;
+            state.hoverPos = null;
+            renderItems();
+            renderHand();
+            renderBoard();
+            if (state.armedTool) {
+                safeSound('good');
+                setToast(`${ITEMS[tool].icon} 已啟動「${ITEMS[tool].name}」，請點棋盤目標格！`, true);
+            } else {
+                setToast('已取消道具');
+            }
+        }
+
+        function clickBoardCell(r, c) {
+            if (!state.playing || state.over) return;
+            if (state.armedTool) {
+                const tool = state.armedTool;
+                state.armedTool = null;
+                if (state.mode === 'multiplayer' && !state.isHost) {
+                    sendData({ type: 'item', tool, r, c });
+                } else {
+                    applyItem('local', tool, r, c);
+                }
+                return;
+            }
+            if (state.pickedSlot !== null) {
+                tryPlace(state.pickedSlot, r, c);
+            }
+        }
+
+        function applyItem(who, tool, r, c) {
+            if ((state.items[who][tool] || 0) <= 0) return;
+            state.items[who][tool] -= 1;
+
+            if (tool === 'reroll') {
+                state.hands[who] = newBatch();
+                safeSound('good');
+                if (who === 'local') {
+                    state.pickedSlot = null;
+                    setToast('🔄 已重新抽取整批 3 個方塊！', true);
+                }
+            } else {
+                const n = GAME_CONFIG.BOARD_SIZE;
+                let cleared = 0;
+                if (tool === 'bomb') {
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            const nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nr < n && nc >= 0 && nc < n && state.board[nr][nc]) {
+                                state.board[nr][nc] = null;
+                                cleared++;
+                            }
+                        }
+                    }
+                } else if (tool === 'col') {
+                    for (let nr = 0; nr < n; nr++) {
+                        if (state.board[nr][c]) { state.board[nr][c] = null; cleared++; }
+                    }
+                } else if (tool === 'row') {
+                    for (let nc = 0; nc < n; nc++) {
+                        if (state.board[r][nc]) { state.board[r][nc] = null; cleared++; }
+                    }
+                }
+                const pts = cleared * GAME_CONFIG.ITEM_CLEAR_PER_CELL;
+                state.score += pts;
+                safeSound('clear');
+                const text = `${ITEMS[tool].icon} 清除 ${cleared} 格（+${pts} 分）！`;
+                if (who === 'local') setToast(text, true);
+                else sendData({ type: 'toast', text });
+            }
+
+            checkEnd();
+            syncAll();
+        }
+
+        function canMove(hand, bag) {
+            const n = GAME_CONFIG.BOARD_SIZE;
+            for (const p of hand) {
+                if (!p) continue;
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        if (canFit(p.matrix, r, c)) return true;
+                    }
+                }
+            }
+            return (bag.bomb || 0) > 0 || (bag.col || 0) > 0 || (bag.row || 0) > 0;
+        }
+
+        function checkEnd() {
+            const a = canMove(state.hands.local, state.items.local);
+            const b = state.mode === 'multiplayer' ? canMove(state.hands.remote, state.items.remote) : false;
+            if (!a && !b) {
+                state.over = true;
+                const isNew = safeSaveScore(state.score);
+                openGameOver(isNew);
+            }
+        }
+
+        function syncAll() {
+            if (state.mode === 'multiplayer' && state.isHost) {
+                sendData({ type: 'snap', snap: snapshot() });
+            }
+            renderBoard();
+            renderHand();
+            renderItems();
+            updateHud();
+        }
+
+        function replayMatch() {
+            document.getElementById('gameover-modal').style.display = 'none';
+            if (state.mode === 'solo' || state.isHost) {
+                resetMatch();
+                showGame();
+                if (state.mode === 'multiplayer' && state.isHost) {
+                    sendData({ type: 'snap', snap: snapshot() });
+                }
+            } else {
+                sendData({ type: 'replay' });
+                setToast('已向房主送出再玩一局請求...', true);
+            }
+        }
+
+        function openGameOver(isNew = false) {
+            document.getElementById('final-score').textContent = `最終得分：${state.score} 分`;
+            document.getElementById('record-flag').classList.toggle('hidden', !isNew);
+            document.getElementById('final-stats').textContent = state.mode === 'multiplayer'
+                ? `${profile.name} 放 ${state.stats.local.cells} 格 / 消 ${state.stats.local.lines} 排；${state.mate.name} 放 ${state.stats.remote.cells} 格 / 消 ${state.stats.remote.lines} 排。`
+                : `累計放置 ${state.stats.local.cells} 格，成功消除 ${state.stats.local.lines} 排。`;
+            document.getElementById('gameover-modal').style.display = 'flex';
+        }
+
+        function buildBoard() {
+            if (boardBuilt) return;
+            const n = GAME_CONFIG.BOARD_SIZE;
+            const el = document.getElementById('board-el');
+            el.style.gridTemplateColumns = `repeat(${n}, auto)`;
+            el.innerHTML = '';
+
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    cell.addEventListener('mouseenter', () => {
+                        state.hoverPos = { r, c };
+                        drawPreview();
+                    });
+                    cell.addEventListener('click', () => clickBoardCell(r, c));
+                    el.appendChild(cell);
+                }
+            }
+
+            el.addEventListener('mouseleave', () => {
+                state.hoverPos = null;
+                clearPreview();
+            });
+            boardBuilt = true;
+        }
+
+        function renderBoard() {
+            buildBoard();
+            const n = GAME_CONFIG.BOARD_SIZE;
+            const aiming = !!(state.armedTool && state.armedTool !== 'reroll');
+
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    const cellEl = document.querySelector(`#board-el .cell[data-r="${r}"][data-c="${c}"]`);
+                    if (!cellEl) continue;
+                    const d = state.board[r] && state.board[r][c];
+                    cellEl.className = 'cell';
+                    cellEl.style.backgroundColor = '';
+                    cellEl.textContent = '';
+
+                    if (aiming) cellEl.classList.add('aim-cell');
+                    if (d && d.color) {
+                        cellEl.classList.add('filled');
+                        cellEl.style.backgroundColor = d.color;
+                        if (d.item && ITEMS[d.item]) cellEl.textContent = ITEMS[d.item].icon;
+                    }
+                }
+            }
+            drawPreview();
+        }
+
+        function clearPreview() {
+            document.querySelectorAll('#board-el .cell').forEach(el => {
+                el.classList.remove('ok-preview', 'bad-preview');
+            });
+        }
+
+        function drawPreview() {
+            clearPreview();
+            if (!state.hoverPos || state.pickedSlot === null) return;
+            const p = state.hands.local[state.pickedSlot];
+            if (!p) return;
+
+            const { r: r0, c: c0 } = state.hoverPos;
+            const ok = canFit(p.matrix, r0, c0);
+            const n = GAME_CONFIG.BOARD_SIZE;
+
+            for (let r = 0; r < p.matrix.length; r++) {
+                for (let c = 0; c < p.matrix[r].length; c++) {
+                    if (!p.matrix[r][c]) continue;
+                    const br = r0 + r, bc = c0 + c;
+                    if (br >= 0 && br < n && bc >= 0 && bc < n) {
+                        const target = document.querySelector(`#board-el .cell[data-r="${br}"][data-c="${bc}"]`);
+                        if (target) target.classList.add(ok ? 'ok-preview' : 'bad-preview');
+                    }
+                }
+            }
+        }
+
+        function renderHand() {
+            const box = document.getElementById('hand-el');
+            box.innerHTML = '';
+
+            state.hands.local.forEach((p, idx) => {
+                const slot = document.createElement('div');
+                const isPicked = state.pickedSlot === idx && !!p;
+                slot.className = 'slot' + (!p ? ' empty' : '') + (isPicked ? ' picked' : '');
+
+                if (p) {
+                    const cols = p.matrix[0].length;
+                    const mini = document.createElement('div');
+                    mini.className = 'mini';
+                    mini.style.gridTemplateColumns = `repeat(${cols}, 14px)`;
+
+                    p.matrix.forEach(row => {
+                        row.forEach(cell => {
+                            const sq = document.createElement('div');
+                            sq.className = 'mini-sq';
+                            if (cell) {
+                                sq.style.backgroundColor = profile.color;
+                                if (cell.item) sq.textContent = ITEMS[cell.item].icon;
+                            } else {
+                                sq.style.background = 'transparent';
+                            }
+                            mini.appendChild(sq);
+                        });
+                    });
+                    slot.appendChild(mini);
+
+                    slot.addEventListener('click', () => {
+                        state.armedTool = null;
+                        state.pickedSlot = state.pickedSlot === idx ? null : idx;
+                        renderItems();
+                        renderHand();
+                        renderBoard();
+                    });
+
+                    slot.addEventListener('touchstart', e => {
+                        if (!state.playing || state.over) return;
+                        e.preventDefault();
+                        state.armedTool = null;
+                        state.pickedSlot = idx;
+                        renderItems();
+                        renderHand();
+                        renderBoard();
+                        const t = e.touches[0];
+                        showGhost(p, t.clientX, t.clientY);
+                        aimTouch(t.clientX, t.clientY);
+                    }, { passive: false });
+
+                    slot.addEventListener('touchmove', e => {
+                        if (state.pickedSlot !== idx) return;
+                        e.preventDefault();
+                        const t = e.touches[0];
+                        showGhost(p, t.clientX, t.clientY);
+                        aimTouch(t.clientX, t.clientY);
+                    }, { passive: false });
+
+                    slot.addEventListener('touchend', e => {
+                        if (state.pickedSlot !== idx) return;
+                        e.preventDefault();
+                        hideGhost();
+                        if (state.hoverPos) {
+                            tryPlace(idx, state.hoverPos.r, state.hoverPos.c);
+                        }
+                        state.hoverPos = null;
+                        clearPreview();
+                    }, { passive: false });
+                }
+
+                box.appendChild(slot);
+            });
+        }
+
+        function aimPoint(x, y) {
+            const off = profile.offset ? GAME_CONFIG.TOUCH_OFFSET_Y : 0;
+            return { x, y: y - off };
+        }
+
+        function showGhost(piece, x, y) {
+            const g = document.getElementById('ghost-el');
+            const pt = aimPoint(x, y);
+            const cols = piece.matrix[0].length;
+            g.style.display = 'grid';
+            g.style.gridTemplateColumns = `repeat(${cols}, 22px)`;
+            g.style.gap = '2px';
+            g.style.left = (pt.x - (cols * 24) / 2) + 'px';
+            g.style.top = (pt.y - (piece.matrix.length * 24) / 2) + 'px';
+            g.innerHTML = '';
+
+            piece.matrix.forEach(row => {
+                row.forEach(cell => {
+                    const d = document.createElement('div');
+                    d.style.width = '22px';
+                    d.style.height = '22px';
+                    d.style.borderRadius = '4px';
+                    d.style.display = 'flex';
+                    d.style.alignItems = 'center';
+                    d.style.justifyContent = 'center';
+                    d.style.fontSize = '0.8rem';
+                    if (cell) {
+                        d.style.backgroundColor = profile.color;
+                        if (cell.item) d.textContent = ITEMS[cell.item].icon;
+                    }
+                    g.appendChild(d);
+                });
+            });
+        }
+
+        function hideGhost() {
+            const g = document.getElementById('ghost-el');
+            g.style.display = 'none';
+            g.innerHTML = '';
+        }
+
+        function aimTouch(x, y) {
+            const pt = aimPoint(x, y);
+            const hit = document.elementFromPoint(pt.x, pt.y);
+            const cell = hit?.closest('#board-el .cell');
+            state.hoverPos = cell
+                ? { r: parseInt(cell.dataset.r, 10), c: parseInt(cell.dataset.c, 10) }
+                : null;
+            drawPreview();
+        }
+
+        function renderItems() {
+            const box = document.getElementById('items-el');
+            box.innerHTML = '';
+            Object.entries(ITEMS).forEach(([key, meta]) => {
+                const cnt = state.items.local[key] || 0;
+                const armed = state.armedTool === key;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'item-card-btn' + (armed ? ' armed' : '');
+                btn.disabled = cnt <= 0;
+                btn.innerHTML = `<span>${meta.icon} ${meta.name}${armed ? ' ●' : ''}</span><span>×${cnt}</span>`;
+                btn.addEventListener('click', () => clickTool(key));
+                box.appendChild(btn);
+            });
+            document.getElementById('btn-cancel-item').classList.toggle('hidden', !state.armedTool);
+        }
+
+        function updateHud() {
+            document.getElementById('hud-score').textContent = state.score;
+            document.getElementById('hud-best').textContent = localStorage.getItem('best_coop_blocks') || 0;
+        }
+
+        window.addEventListener('DOMContentLoaded', initLobby);
+    </script>
+</body>
+</html>

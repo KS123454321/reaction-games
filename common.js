@@ -1,7 +1,9 @@
-// 1. 內建免檔案音效產生器 (答對叮咚聲、答錯低音)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// 1. 內建免檔案音效產生器
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = AudioContextClass ? new AudioContextClass() : null;
 
 function playSound(type) {
+    if (!audioCtx) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -10,7 +12,6 @@ function playSound(type) {
 
     const now = audioCtx.currentTime;
     if (type === 'good') {
-        // 清脆高音叮咚
         osc.type = 'sine';
         osc.frequency.setValueAtTime(523.25, now); // C5
         osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
@@ -18,8 +19,16 @@ function playSound(type) {
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
         osc.start(now);
         osc.stop(now + 0.25);
+    } else if (type === 'clear') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(783.99, now + 0.07); // G5
+        osc.frequency.setValueAtTime(1046.5, now + 0.14); // C6
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
     } else if (type === 'bad') {
-        // 低沉提醒音
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(180, now);
         osc.frequency.linearRampToValueAtTime(120, now + 0.2);
