@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學快算判斷挑戰</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-container {
+            text-align: center;
+            max-width: 660px;
+            margin: 0 auto;
+            padding-bottom: 24px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 頂部控制列 */
+        .control-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 12px;
+        }
+
+        .mode-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-mode {
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border: 2px solid rgba(128, 128, 128, 0.25);
+            background: rgba(128, 128, 128, 0.08);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-mode.active-timed {
+            background: #FF9F1C;
+            color: #FFF;
+            border-color: #E67E22;
+            box-shadow: 0 3px 0 #BA4A00;
+        }
+
+        .btn-reset-icon {
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border: 2px solid rgba(128, 128, 128, 0.25);
+            background: rgba(128, 128, 128, 0.08);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .btn-reset-icon:active {
+            transform: translateY(2px);
+        }
+
+        /* 難度階段選擇標籤 */
+        .stage-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: var(--card-bg);
+            padding: 8px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            margin-bottom: 14px;
+        }
+
+        .stage-tab {
+            flex: 1;
+            min-width: 82px;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-color);
+            opacity: 0.75;
+            transition: all 0.15s;
+        }
+        .stage-tab:hover {
+            opacity: 1;
+            background: rgba(128, 128, 128, 0.12);
+        }
+        .stage-tab.active {
+            background: #3B82F6;
+            color: #FFF;
+            opacity: 1;
+            box-shadow: 0 3px 0 #1D4ED8;
+        }
+
+        /* 數據儀表板 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 12px 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, border-color 0.2s;
+            border: 2px solid transparent;
+        }
+        .stat-card.streak-good {
+            border-color: #27AE60;
+            background: rgba(39, 174, 96, 0.12);
+        }
+        .stat-card.streak-warn {
+            border-color: #F39C12;
+            background: rgba(243, 156, 18, 0.12);
+        }
+        .stat-card.streak-bad {
+            border-color: #E74C3C;
+            background: rgba(231, 76, 60, 0.14);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.75;
+            font-weight: bold;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 900;
+            margin-top: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 算式展示主卡片 */
+        .equation-card {
+            position: relative;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 20px 18px;
+            min-height: 220px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+            border: 3px solid rgba(128, 128, 128, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .level-badge {
+            padding: 4px 10px;
+            border-radius: 10px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #2563EB;
+        }
+        [data-theme="dark"] .level-badge {
+            background: rgba(96, 165, 250, 0.2);
+            color: #93C5FD;
+        }
+
+        .reward-badges {
+            display: flex;
+            gap: 6px;
+        }
+        .badge-gain {
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: rgba(39, 174, 96, 0.15);
+            color: #1E8449;
+        }
+        [data-theme="dark"] .badge-gain {
+            color: #6EE7B7;
+        }
+        .badge-loss {
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: rgba(231, 76, 60, 0.15);
+            color: #C0392B;
+        }
+        [data-theme="dark"] .badge-loss {
+            color: #FCA5A5;
+        }
+
+        .equation-display {
+            font-size: clamp(2rem, 6vw, 3.2rem);
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin: auto 0;
+            padding: 16px 0;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.4;
+        }
+
+        /* 分數堆疊排版 */
+        .fraction {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 0.25em;
+            font-size: 0.72em;
+            line-height: 1.15;
+        }
+        .fraction .num {
+            border-bottom: 3px solid currentColor;
+            padding: 0 0.3em 0.1em;
+            width: 100%;
+            text-align: center;
+        }
+        .fraction .den {
+            padding: 0.1em 0.3em 0;
+            width: 100%;
+            text-align: center;
+        }
+
+        .feedback-hint {
+            min-height: 24px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .feedback-hint.show {
+            opacity: 1;
+        }
+
+        /* 操作按鈕區 */
+        .answer-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .btn-choice {
+            border: none;
+            border-radius: 20px;
+            padding: 18px 14px;
+            color: #FFF;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: transform 0.08s, box-shadow 0.08s;
+        }
+        .btn-choice:active {
+            transform: translateY(4px);
+        }
+
+        .btn-true {
+            background: #27AE60;
+            box-shadow: 0 6px 0 #1E8449;
+        }
+        .btn-true:active {
+            box-shadow: 0 2px 0 #1E8449;
+        }
+
+        .btn-false {
+            background: #E74C3C;
+            box-shadow: 0 6px 0 #B03A2E;
+        }
+        .btn-false:active {
+            box-shadow: 0 2px 0 #B03A2E;
+        }
+
+        .choice-main {
+            font-size: 1.6rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .choice-sub {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        /* 規則說明列 */
+        .rules-footer {
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            opacity: 0.88;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        /* 動畫特效 */
+        @keyframes pulseGreen {
+            0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.5); border-color: #27AE60; }
+            70% { box-shadow: 0 0 0 14px rgba(39, 174, 96, 0); border-color: #27AE60; }
+            100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
+        @keyframes shakeRed {
+            0%, 100% { transform: translateX(0); border-color: #E74C3C; }
+            20%, 60% { transform: translateX(-8px); border-color: #E74C3C; }
+            40%, 80% { transform: translateX(8px); border-color: #E74C3C; }
+        }
+        @keyframes floatUpFade {
+            0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
+            25% { opacity: 1; transform: translate(-50%, -12px) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -48px) scale(1); }
+        }
+
+        .anim-correct { animation: pulseGreen 0.45s ease-out; }
+        .anim-wrong { animation: shakeRed 0.4s ease-in-out; }
+
+        .floating-score {
+            position: absolute;
+            left: 50%;
+            top: 22%;
+            pointer-events: none;
+            font-size: 1.7rem;
+            font-weight: 900;
+            animation: floatUpFade 0.85s ease-out forwards;
+            z-index: 20;
+        }
+
+        /* 限時結算覆蓋視窗 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-card {
+            background: var(--card-bg);
+            color: var(--text-color);
+            max-width: 380px;
+            width: 100%;
+            padding: 24px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .modal-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            background: rgba(128, 128, 128, 0.1);
+            padding: 14px;
+            border-radius: 16px;
+            margin: 16px 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-home" onclick="exitToHome(isStarted)">🏠 回首頁</button>
+        <button class="btn-theme" onclick="toggleTheme()">🌓 切換模式</button>
+        <div class="score-display">最高分：<span id="topHighScore">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <h2>🧮 數學快算判斷挑戰</h2>
+
+        <!-- 模式與重新開始控制列 -->
+        <div class="control-bar">
+            <div style="text-align: left;">
+                <div style="font-weight: bold; font-size: 0.98rem;">判斷算式真偽</div>
+                <div style="font-size: 0.82rem; opacity: 0.75;">連對累加 · 連錯倒扣</div>
+            </div>
+            <div class="mode-group">
+                <button id="timerToggleBtn" class="btn-mode" onclick="toggleTimerMode()">
+                    <span id="timerIcon">⏱️</span> <span id="timerModeText">休閒無限時</span>
+                </button>
+                <button class="btn-reset-icon" onclick="resetGame()" title="重新開始">🔄 重來</button>
+            </div>
+        </div>
+
+        <!-- 難度階段標籤 -->
+        <div class="stage-tabs">
+            <button data-stage="auto" onclick="selectStage('auto')" class="stage-tab active">自動進階</button>
+            <button data-stage="1" onclick="selectStage('1')" class="stage-tab">1. 基礎運算</button>
+            <button data-stage="2" onclick="selectStage('2')" class="stage-tab">2. 多位數</button>
+            <button data-stage="3" onclick="selectStage('3')" class="stage-tab">3. 小數計算</button>
+            <button data-stage="4" onclick="selectStage('4')" class="stage-tab">4. 分數計算</button>
+        </div>
+
+        <!-- 數據儀表板 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">目前分數</span>
+                <span id="scoreDisplay" class="stat-value">0</span>
+            </div>
+            <div id="streakCard" class="stat-card">
+                <span class="stat-label">目前狀態</span>
+                <span id="streakDisplay" class="stat-value" style="font-size: 1.15rem;">準備開始</span>
+            </div>
+            <div class="stat-card">
+                <span id="rightStatLabel" class="stat-label">最高紀錄</span>
+                <span id="rightStatValue" class="stat-value" style="color: #F39C12;">0</span>
+            </div>
+        </div>
+
+        <!-- 算式展示主卡片 -->
+        <div id="equationCard" class="equation-card">
+            <div id="floatingContainer" style="position: absolute; inset: 0; pointer-events: none;"></div>
+
+            <div class="card-header">
+                <span id="currentLevelBadge" class="level-badge">Lv.1 基礎加減乘除</span>
+                <div class="reward-badges">
+                    <span id="nextRewardBadge" class="badge-gain">答對 +10</span>
+                    <span id="nextPenaltyBadge" class="badge-loss">答錯歸零</span>
+                </div>
+            </div>
+
+            <div id="equationDisplay" class="equation-display">12 + 7 = 19</div>
+
+            <div id="feedbackHint" class="feedback-hint"></div>
+        </div>
+
+        <!-- 正確 / 錯誤作答按鈕 -->
+        <div class="answer-buttons">
+            <button id="btnTrue" class="btn-choice btn-true" onclick="handleAnswer(true)">
+                <div class="choice-main">⭕ 正確</div>
+                <div class="choice-sub">鍵盤 ← 或 O / Y</div>
+            </button>
+            <button id="btnFalse" class="btn-choice btn-false" onclick="handleAnswer(false)">
+                <div class="choice-main">❌ 錯誤</div>
+                <div class="choice-sub">鍵盤 → 或 X / N</div>
+            </button>
+        </div>
+
+        <div class="rules-footer">
+            <b>計分規則：</b>連續答對每次加分遞增（+10, +20, +30...）；答錯時連擊歸零；若連續答錯將開始遞增扣分（第1次錯不扣分，第2次連錯 -10，第3次連錯 -20...）。
+        </div>
+    </div>
+
+    <!-- 限時模式結算視窗 -->
+    <div id="gameOverModal" class="modal-overlay">
+        <div class="modal-card">
+            <div style="font-size: 3rem; margin-bottom: 8px;">🏁</div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 4px;">時間到！挑戰結束</h3>
+            <p style="font-size: 0.92rem; opacity: 0.75;">您在 60 秒快算挑戰中的成績如下</p>
+
+            <div class="modal-stats">
+                <div>
+                    <div style="font-size: 0.82rem; opacity: 0.75;">最終得分</div>
+                    <div id="finalScoreText" style="font-size: 1.8rem; font-weight: 900; color: #3B82F6;">0</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.82rem; opacity: 0.75;">最高連對</div>
+                    <div id="finalMaxStreakText" style="font-size: 1.8rem; font-weight: 900; color: #27AE60;">0</div>
+                </div>
+            </div>
+
+            <button class="btn-big" style="width: 100%;" onclick="closeModalAndRestart()">再挑戰一次 ▶</button>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let isStarted = false;
+
+        // 讀取既有最高分，並同步與 common.js 的 'math' 鍵值對齊
+        function loadInitialHighScore() {
+            const legacy = parseInt(localStorage.getItem('math_judge_highscore') || '0', 10);
+            let hubBest = 0;
+            try {
+                const allScores = JSON.parse(localStorage.getItem('reactionGamesScores') || '{}');
+                hubBest = parseInt(allScores['math'] || '0', 10);
+            } catch (e) {}
+            const best = Math.max(legacy, hubBest);
+            if (best > 0 && typeof saveHighScore === 'function') {
+                saveHighScore('math', best);
+            }
+            return best;
+        }
+
+        const state = {
+            score: 0,
+            highScore: loadInitialHighScore(),
+            positiveStreak: 0,
+            negativeStreak: 0,
+            maxPositiveStreak: 0,
+            totalCorrect: 0,
+            selectedStage: 'auto',
+            currentEquation: null,
+            isTimerMode: false,
+            timeLeft: 60,
+            timerInterval: null,
+            isGameOver: false,
+            basePoints: 10
+        };
+
+        const el = {
+            topHighScore: document.getElementById('topHighScore'),
+            scoreDisplay: document.getElementById('scoreDisplay'),
+            streakCard: document.getElementById('streakCard'),
+            streakDisplay: document.getElementById('streakDisplay'),
+            rightStatLabel: document.getElementById('rightStatLabel'),
+            rightStatValue: document.getElementById('rightStatValue'),
+            equationCard: document.getElementById('equationCard'),
+            equationDisplay: document.getElementById('equationDisplay'),
+            currentLevelBadge: document.getElementById('currentLevelBadge'),
+            nextRewardBadge: document.getElementById('nextRewardBadge'),
+            nextPenaltyBadge: document.getElementById('nextPenaltyBadge'),
+            feedbackHint: document.getElementById('feedbackHint'),
+            floatingContainer: document.getElementById('floatingContainer'),
+            timerToggleBtn: document.getElementById('timerToggleBtn'),
+            timerIcon: document.getElementById('timerIcon'),
+            timerModeText: document.getElementById('timerModeText'),
+            gameOverModal: document.getElementById('gameOverModal'),
+            finalScoreText: document.getElementById('finalScoreText'),
+            finalMaxStreakText: document.getElementById('finalMaxStreakText')
+        };
+
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function gcd(a, b) {
+            a = Math.abs(a);
+            b = Math.abs(b);
+            while (b !== 0) {
+                let t = b;
+                b = a % b;
+                a = t;
+            }
+            return a;
+        }
+
+        function formatFractionHTML(num, den) {
+            if (den === 1) return `${num}`;
+            return `<span class="fraction"><span class="num">${num}</span><span class="den">${den}</span></span>`;
+        }
+
+        function formatFractionText(num, den) {
+            if (den === 1) return `${num}`;
+            return `${num}/${den}`;
+        }
+
+        function resolveActiveStage() {
+            if (state.selectedStage !== 'auto') {
+                return parseInt(state.selectedStage, 10);
+            }
+            if (state.totalCorrect < 5 && state.score < 100) return 1;
+            if (state.totalCorrect < 12 && state.score < 350) return 2;
+            if (state.totalCorrect < 20 && state.score < 700) return 3;
+            return 4;
+        }
+
+        function generateEquation() {
+            const stage = resolveActiveStage();
+            const isTrue = Math.random() < 0.5;
+            let eq = null;
+
+            switch (stage) {
+                case 1: eq = generateStage1Basic(isTrue); break;
+                case 2: eq = generateStage2MultiDigit(isTrue); break;
+                case 3: eq = generateStage3Decimals(isTrue); break;
+                case 4: eq = generateStage4Fractions(isTrue); break;
+            }
+            eq.stage = stage;
+            return eq;
+        }
+
+        function generateStage1Basic(isTrue) {
+            const ops = ['+', '-', '×', '÷'];
+            const op = ops[randInt(0, 3)];
+            let a, b, ans, shownAns;
+
+            if (op === '+') {
+                a = randInt(3, 25);
+                b = randInt(2, 25);
+                ans = a + b;
+            } else if (op === '-') {
+                a = randInt(10, 35);
+                b = randInt(2, a - 1);
+                ans = a - b;
+            } else if (op === '×') {
+                a = randInt(2, 9);
+                b = randInt(2, 9);
+                ans = a * b;
+            } else {
+                b = randInt(2, 9);
+                ans = randInt(2, 9);
+                a = b * ans;
+            }
+
+            if (isTrue) {
+                shownAns = ans;
+            } else {
+                const offsets = [-2, -1, 1, 2, 10];
+                let offset = offsets[randInt(0, offsets.length - 1)];
+                if (ans + offset < 0) offset = Math.abs(offset);
+                shownAns = ans + offset;
+            }
+
+            return {
+                html: `${a} ${op} ${b} = ${shownAns}`,
+                isTrue,
+                correctionText: `${a} ${op} ${b} = ${ans}`
+            };
+        }
+
+        function generateStage2MultiDigit(isTrue) {
+            const ops = ['+', '-', '×', '÷'];
+            const op = ops[randInt(0, 3)];
+            let a, b, ans, shownAns;
+
+            if (op === '+') {
+                a = randInt(45, 280);
+                b = randInt(35, 250);
+                ans = a + b;
+            } else if (op === '-') {
+                a = randInt(120, 450);
+                b = randInt(35, a - 25);
+                ans = a - b;
+            } else if (op === '×') {
+                a = randInt(12, 28);
+                b = randInt(4, 12);
+                ans = a * b;
+            } else {
+                b = randInt(6, 15);
+                ans = randInt(11, 24);
+                a = b * ans;
+            }
+
+            if (isTrue) {
+                shownAns = ans;
+            } else {
+                const offsets = [-10, -2, -1, 1, 2, 10, 20];
+                let offset = offsets[randInt(0, offsets.length - 1)];
+                if (ans + offset <= 0) offset = 10;
+                shownAns = ans + offset;
+            }
+
+            return {
+                html: `${a} ${op} ${b} = ${shownAns}`,
+                isTrue,
+                correctionText: `${a} ${op} ${b} = ${ans}`
+            };
+        }
+
+        function generateStage3Decimals(isTrue) {
+            const ops = ['+', '-', '×'];
+            const op = ops[randInt(0, 2)];
+            let aInt, bInt, ans, shownAns, aStr, bStr;
+
+            if (op === '+' || op === '-') {
+                aInt = randInt(12, 98);
+                bInt = randInt(5, 85);
+                if (op === '-' && aInt <= bInt) {
+                    [aInt, bInt] = [bInt + randInt(5, 20), aInt];
+                }
+                const ansInt = op === '+' ? (aInt + bInt) : (aInt - bInt);
+                aStr = (aInt / 10).toFixed(1);
+                bStr = (bInt / 10).toFixed(1);
+                ans = Number((ansInt / 10).toFixed(1));
+
+                if (isTrue) {
+                    shownAns = ans.toFixed(1);
+                } else {
+                    const offsets = [-1.0, -0.2, -0.1, 0.1, 0.2, 1.0];
+                    let wrong = Number((ans + offsets[randInt(0, offsets.length - 1)]).toFixed(1));
+                    if (wrong < 0) wrong = Number((ans + 0.2).toFixed(1));
+                    shownAns = wrong.toFixed(1);
+                }
+            } else {
+                aInt = randInt(2, 15);
+                bInt = randInt(2, 9);
+                const ansInt = aInt * bInt;
+                aStr = (aInt / 10).toFixed(1);
+                bStr = (bInt / 10).toFixed(1);
+                ans = Number((ansInt / 100).toFixed(2));
+
+                if (isTrue) {
+                    shownAns = ans.toString();
+                } else {
+                    const mistakeType = randInt(0, 2);
+                    let wrong;
+                    if (mistakeType === 0) {
+                        wrong = Number((ans * 10).toFixed(1));
+                    } else if (mistakeType === 1) {
+                        wrong = Number((ans + 0.1).toFixed(2));
+                    } else {
+                        wrong = Number(Math.max(0.01, ans - 0.02).toFixed(2));
+                    }
+                    if (wrong === ans) wrong = Number((ans + 0.04).toFixed(2));
+                    shownAns = wrong.toString();
+                }
+            }
+
+            return {
+                html: `${aStr} ${op} ${bStr} = ${shownAns}`,
+                isTrue,
+                correctionText: `${aStr} ${op} ${bStr} = ${ans}`
+            };
+        }
+
+        function generateStage4Fractions(isTrue) {
+            const dens = [2, 3, 4, 5, 6, 8];
+            const ops = ['+', '-', '×'];
+            const op = ops[randInt(0, 2)];
+
+            let d1 = dens[randInt(0, dens.length - 1)];
+            let d2 = dens[randInt(0, dens.length - 1)];
+            let n1 = randInt(1, d1 - 1);
+            let n2 = randInt(1, d2 - 1);
+
+            if (op === '-' && (n1 / d1 <= n2 / d2)) {
+                [n1, d1, n2, d2] = [n2, d2, n1, d1];
+                if (n1 / d1 === n2 / d2) n1 += 1;
+            }
+
+            let rawNum, rawDen;
+            if (op === '+') {
+                rawNum = n1 * d2 + n2 * d1;
+                rawDen = d1 * d2;
+            } else if (op === '-') {
+                rawNum = n1 * d2 - n2 * d1;
+                rawDen = d1 * d2;
+            } else {
+                rawNum = n1 * n2;
+                rawDen = d1 * d2;
+            }
+
+            const common = gcd(rawNum, rawDen);
+            const ansNum = rawNum / common;
+            const ansDen = rawDen / common;
+
+            let shownNum = ansNum;
+            let shownDen = ansDen;
+
+            if (!isTrue) {
+                const errType = randInt(0, 2);
+                if (errType === 0 && op !== '×') {
+                    const naiveNum = op === '+' ? (n1 + n2) : Math.max(1, Math.abs(n1 - n2));
+                    const naiveDen = d1 + d2;
+                    const g = gcd(naiveNum, naiveDen);
+                    shownNum = naiveNum / g;
+                    shownDen = naiveDen / g;
+                } else if (errType === 1) {
+                    shownNum = ansNum + (Math.random() < 0.5 ? 1 : -1);
+                    if (shownNum <= 0) shownNum = ansNum + 2;
+                    shownDen = ansDen;
+                } else {
+                    shownNum = ansNum;
+                    shownDen = ansDen + (Math.random() < 0.5 ? 1 : 2);
+                }
+                if (shownNum * ansDen === ansNum * shownDen) {
+                    shownNum += 1;
+                }
+            }
+
+            const leftHTML = `${formatFractionHTML(n1, d1)} ${op} ${formatFractionHTML(n2, d2)}`;
+            const rightHTML = formatFractionHTML(shownNum, shownDen);
+
+            return {
+                html: `${leftHTML} = ${rightHTML}`,
+                isTrue,
+                correctionText: `${formatFractionText(n1, d1)} ${op} ${formatFractionText(n2, d2)} = ${formatFractionText(ansNum, ansDen)}`
+            };
+        }
+
+        function getNextScoreDeltas() {
+            const nextGain = (state.positiveStreak + 1) * state.basePoints;
+            const nextPenalty = state.negativeStreak === 0 ? 0 : -(state.negativeStreak * state.basePoints);
+            return { nextGain, nextPenalty };
+        }
+
+        function handleAnswer(userChoice) {
+            if (state.isGameOver || !state.currentEquation) return;
+            isStarted = true;
+
+            const isCorrect = (userChoice === state.currentEquation.isTrue);
+            let delta = 0;
+
+            el.equationCard.classList.remove('anim-correct', 'anim-wrong');
+            void el.equationCard.offsetWidth;
+
+            if (isCorrect) {
+                state.negativeStreak = 0;
+                state.positiveStreak += 1;
+                state.totalCorrect += 1;
+                if (state.positiveStreak > state.maxPositiveStreak) {
+                    state.maxPositiveStreak = state.positiveStreak;
+                }
+
+                delta = state.positiveStreak * state.basePoints;
+                state.score += delta;
+
+                if (state.score > state.highScore) {
+                    state.highScore = state.score;
+                    localStorage.setItem('math_judge_highscore', state.highScore.toString());
+                    if (typeof saveHighScore === 'function') {
+                        saveHighScore('math', state.highScore);
+                    }
+                }
+
+                if (typeof playSound === 'function') playSound('good');
+                el.equationCard.classList.add('anim-correct');
+                spawnFloatingScore(`+${delta}`, '#27AE60');
+                showFeedbackHint('✓ 判斷正確！', '#27AE60');
+            } else {
+                state.positiveStreak = 0;
+                state.negativeStreak += 1;
+
+                if (state.negativeStreak === 1) {
+                    delta = 0;
+                    spawnFloatingScore('連擊中斷 (0)', '#F39C12');
+                } else {
+                    delta = -((state.negativeStreak - 1) * state.basePoints);
+                    state.score += delta;
+                    spawnFloatingScore(`${delta}`, '#E74C3C');
+                }
+
+                if (typeof playSound === 'function') playSound('bad');
+                el.equationCard.classList.add('anim-wrong');
+                showFeedbackHint(`✗ 答錯了！正確算式為：${state.currentEquation.correctionText}`, '#E74C3C');
+            }
+
+            state.currentEquation = generateEquation();
+            updateUI();
+        }
+
+        function spawnFloatingScore(text, colorHex) {
+            const badge = document.createElement('div');
+            badge.className = 'floating-score';
+            badge.style.color = colorHex;
+            badge.textContent = text;
+            el.floatingContainer.appendChild(badge);
+            setTimeout(() => badge.remove(), 850);
+        }
+
+        function showFeedbackHint(text, colorHex) {
+            el.feedbackHint.textContent = text;
+            el.feedbackHint.style.color = colorHex;
+            el.feedbackHint.classList.add('show');
+        }
+
+        function updateUI() {
+            el.topHighScore.textContent = state.highScore;
+
+            el.scoreDisplay.textContent = state.score;
+            el.scoreDisplay.style.color = state.score < 0 ? '#E74C3C' : 'var(--text-color)';
+
+            el.streakCard.classList.remove('streak-good', 'streak-warn', 'streak-bad');
+            if (state.positiveStreak > 0) {
+                el.streakDisplay.textContent = `🔥 連對 x${state.positiveStreak}`;
+                el.streakDisplay.style.color = '#27AE60';
+                el.streakCard.classList.add('streak-good');
+            } else if (state.negativeStreak >= 2) {
+                el.streakDisplay.textContent = `⚠️ 連錯 x${state.negativeStreak}`;
+                el.streakDisplay.style.color = '#E74C3C';
+                el.streakCard.classList.add('streak-bad');
+            } else if (state.negativeStreak === 1) {
+                el.streakDisplay.textContent = '連擊歸零';
+                el.streakDisplay.style.color = '#F39C12';
+                el.streakCard.classList.add('streak-warn');
+            } else {
+                el.streakDisplay.textContent = '準備開始';
+                el.streakDisplay.style.color = 'var(--text-color)';
+            }
+
+            if (state.isTimerMode) {
+                el.rightStatLabel.textContent = '剩餘時間';
+                el.rightStatValue.textContent = `${state.timeLeft}s`;
+                el.rightStatValue.style.color = state.timeLeft <= 10 ? '#E74C3C' : '#3B82F6';
+            } else {
+                el.rightStatLabel.textContent = '最高紀錄';
+                el.rightStatValue.textContent = state.highScore;
+                el.rightStatValue.style.color = '#F39C12';
+            }
+
+            const stageNames = {
+                1: 'Lv.1 基礎加減乘除',
+                2: 'Lv.2 多位數進階',
+                3: 'Lv.3 小數精確運算',
+                4: 'Lv.4 分數約分挑戰'
+            };
+            const currentStage = state.currentEquation.stage;
+            const prefix = state.selectedStage === 'auto' ? '自動進階 · ' : '指定練習 · ';
+            el.currentLevelBadge.textContent = prefix + stageNames[currentStage];
+
+            const { nextGain, nextPenalty } = getNextScoreDeltas();
+            el.nextRewardBadge.textContent = `答對 +${nextGain}`;
+            el.nextPenaltyBadge.textContent = nextPenalty === 0 ? '答錯歸零' : `答錯 ${nextPenalty}`;
+
+            el.equationDisplay.innerHTML = state.currentEquation.html;
+        }
+
+        function selectStage(stageKey) {
+            state.selectedStage = stageKey;
+            document.querySelectorAll('.stage-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.stage === stageKey);
+            });
+            state.currentEquation = generateEquation();
+            updateUI();
+        }
+
+        function toggleTimerMode() {
+            state.isTimerMode = !state.isTimerMode;
+            if (state.isTimerMode) {
+                el.timerIcon.textContent = '🔥';
+                el.timerModeText.textContent = '限時 60 秒';
+                el.timerToggleBtn.classList.add('active-timed');
+            } else {
+                el.timerIcon.textContent = '⏱️';
+                el.timerModeText.textContent = '休閒無限時';
+                el.timerToggleBtn.classList.remove('active-timed');
+            }
+            resetGame();
+        }
+
+        function startTimer() {
+            clearInterval(state.timerInterval);
+            if (!state.isTimerMode) return;
+
+            state.timeLeft = 60;
+            state.timerInterval = setInterval(() => {
+                state.timeLeft -= 1;
+                updateUI();
+                if (state.timeLeft <= 0) {
+                    endTimedGame();
+                }
+            }, 1000);
+        }
+
+        function endTimedGame() {
+            clearInterval(state.timerInterval);
+            state.isGameOver = true;
+            if (typeof saveHighScore === 'function') {
+                saveHighScore('math', state.score);
+            }
+            el.finalScoreText.textContent = state.score;
+            el.finalMaxStreakText.textContent = `x${state.maxPositiveStreak}`;
+            el.gameOverModal.classList.add('show');
+        }
+
+        function closeModalAndRestart() {
+            el.gameOverModal.classList.remove('show');
+            resetGame();
+        }
+
+        function resetGame() {
+            clearInterval(state.timerInterval);
+            isStarted = false;
+            state.score = 0;
+            state.positiveStreak = 0;
+            state.negativeStreak = 0;
+            state.maxPositiveStreak = 0;
+            state.totalCorrect = 0;
+            state.isGameOver = false;
+            el.feedbackHint.classList.remove('show');
+            state.currentEquation = generateEquation();
+            if (state.isTimerMode) {
+                isStarted = true;
+                startTimer();
+            }
+            updateUI();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (state.isGameOver) return;
+            const key = e.key.toLowerCase();
+            if (e.key === 'ArrowLeft' || key === 'o' || key === 'y') {
+                e.preventDefault();
+                handleAnswer(true);
+            } else if (e.key === 'ArrowRight' || key === 'x' || key === 'n') {
+                e.preventDefault();
+                handleAnswer(false);
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', resetGame);
+    </script>
+</body>
+</html>
