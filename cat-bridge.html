@@ -11,9 +11,25 @@
         .status-bar {
             display: flex; justify-content: space-around; align-items: center;
             background: #FFF3CD !important; color: #2C3E50 !important;
-            padding: 10px 14px; border-radius: 14px; font-size: 1.15rem; font-weight: bold;
+            padding: 10px 14px; border-radius: 14px; font-size: 1.1rem; font-weight: bold;
             margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             flex-wrap: wrap; gap: 8px;
+        }
+
+        .btn-restart-mini {
+            background: #E67E22;
+            color: #FFF;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #BA4A00;
+        }
+        .btn-restart-mini:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #BA4A00;
         }
 
         /* 2.5D 等距視角主舞台 */
@@ -163,10 +179,6 @@
             box-shadow: 2px 2px 0 #558B2F, 3px 3px 0 #4E342E;
             z-index: 4;
         }
-        .micro-cell.land.entry-spot::before,
-        .micro-cell.land.exit-spot::before {
-            z-index: 6;
-        }
 
         .macro-cell.preview-ok .micro-cell.preview-land {
             background: rgba(174, 234, 0, 0.9);
@@ -177,8 +189,11 @@
             background: rgba(231, 76, 60, 0.55) !important;
         }
 
+        /* 過關路徑明顯高亮標示 */
         .micro-cell.path-highlight {
-            background: #AED581 !important;
+            background: #FFEE58 !important;
+            box-shadow: inset 0 0 0 2px #F57F17, 0 0 8px #FFD54F !important;
+            z-index: 7;
         }
 
         .corner-badge-right {
@@ -228,7 +243,6 @@
             gap: 10px;
         }
 
-        /* 3x3 九宮格預覽框：套用與河道相同的斜角視角旋轉 */
         .iso-preview-stage {
             width: 118px;
             height: 82px;
@@ -289,6 +303,30 @@
             max-width: 280px;
             opacity: 0.9;
         }
+
+        .result-box {
+            margin-top: 14px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+        }
+        .btn-next-stage {
+            background: #27AE60;
+            color: #FFF;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-size: 1.15rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1E8449;
+            margin-right: 10px;
+        }
+        .btn-next-stage:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1E8449;
+        }
     </style>
 </head>
 <body>
@@ -303,14 +341,16 @@
 
         <div class="status-bar">
             <div>🌊 第 <span id="level">1</span> 關</div>
-            <div>🍽️ 目標食物：<span id="food-name">鮮美烤魚</span> <span id="food-icon-bar">🐟</span></div>
+            <div>🍽️ <span id="food-name">鮮美烤魚</span> <span id="food-icon-bar">🐟</span></div>
             <div>🏝️ 已用：<span id="used-count">0</span> / <span id="max-limit">10</span></div>
+            <button class="btn-restart-mini" onclick="restartFullGame()">🔄 重啟新遊戲</button>
         </div>
 
         <div style="margin-bottom: 10px; font-size: 1rem; font-weight: bold;" id="msg-bar">
             從入口（IN）連通到出口（OUT）！手機觸控會自動在手指上方瞄準。
         </div>
 
+        <!-- 2.5D 等距斜角主舞台 -->
         <div class="iso-stage" id="iso-stage">
             <div class="corner-badge-right">
                 剩餘島嶼：<span id="remain-count" style="color: #E67E22; font-size: 1.3rem;">10</span> 塊
@@ -330,6 +370,14 @@
             </div>
         </div>
 
+		<!-- 過關停留恭喜面板（保留過關路徑畫面，等待玩家點擊進入下一關） -->
+        <div id="win-box" class="result-box" style="display:none; border: 2px solid #27AE60;">
+            <h3 style="color: #27AE60; margin-bottom: 8px;" id="win-title">🎉 恭喜過關！</h3>
+            <p id="win-desc" style="font-size: 1.05rem; margin-bottom: 14px;"></p>
+            <button class="btn-next-stage" onclick="goToNextStage()">開始下一關 ▶</button>
+        </div>
+
+        <!-- 底部島嶼展示區 -->
         <div class="dock-panel" id="dock-panel">
             <div class="piece-card">
                 <div style="font-weight: bold; font-size: 0.98rem;">🏝️ 目前島嶼（斜角視角）</div>
@@ -352,10 +400,11 @@
             </div>
         </div>
 
-        <div id="gameover-box" style="display:none; margin-top: 14px; background: var(--card-bg); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.12);">
+        <!-- 遊戲結束結算框 -->
+        <div id="gameover-box" class="result-box" style="display:none; border: 2px solid #E74C3C;">
             <h3 style="color: #E74C3C; margin-bottom: 8px;" id="gameover-title">💥 挑戰失敗！</h3>
             <p id="gameover-desc" style="font-size: 1.05rem; margin-bottom: 12px;"></p>
-            <button class="btn-big" onclick="restartFullGame()">重新挑戰 ▶</button>
+            <button class="btn-big" onclick="restartFullGame()">🔄 重啟新遊戲 ▶</button>
         </div>
     </div>
 
@@ -365,10 +414,10 @@
         // ⚙️ 遊戲參數設定區（可直接調整格數與上限）
         // ==========================================
         const GAME_CONFIG = {
-            minCells: 3,           // 九宮格島嶼最少實心格數
-            maxCells: 7,           // 九宮格島嶼最多實心格數（可改為 8 或 9）
+            minCells: 3,            // 九宮格島嶼最少實心格數
+            maxCells: 7,            // 九宮格島嶼最多實心格數（可改為 8 或 9）
             maxIslandsPerStage: 10, // 每局最多出幾個島嶼
-            touchOffsetY: 68       // 手機觸控時瞄準點往上偏移的像素距離
+            touchOffsetY: 68        // 手機觸控時瞄準點往上偏移的像素距離
         };
 
         const FOODS = [
@@ -383,6 +432,7 @@
 
         let isStarted = false;
         let isGameOver = false;
+        let isStageCleared = false;
         let isAnimating = false;
         let level = 1;
         let totalScore = 0;
@@ -390,24 +440,24 @@
 
         let macroOccupied = [];
         let microLand = [];
+        let clearedPath = [];
 
-        // 入口：上方 4 大格任一格 (0~3) + 九宮格 (1)(2)(3) 其中一格
         let entryMacroCol = 0;
-        let entrySubCell = 2; // 1, 2, 3
-
-        // 出口：下方 4 大格任一格 (0~3) + 九宮格 (7)(8)(9) 其中一格
+        let entrySubCell = 2;
         let exitMacroCol = 3;
-        let exitSubCell = 8;  // 7, 8, 9
+        let exitSubCell = 8;
 
         let currentPiece = [];
         let nextPiece = [];
         let hoverMacroIdx = null;
 
         // ==========================================
-        // 🧩 九宮格隨機生成器
+        // 🧩 九宮格隨機生成器（雙重相鄰規則）
         // ==========================================
         function generateValidNineGridIsland() {
-            while (true) {
+            let guard = 0;
+            while (guard < 2000) {
+                guard++;
                 const count = Math.floor(Math.random() * (GAME_CONFIG.maxCells - GAME_CONFIG.minCells + 1)) + GAME_CONFIG.minCells;
                 const pool = [1, 2, 3, 4, 5, 6, 7, 8, 9];
                 for (let i = pool.length - 1; i > 0; i--) {
@@ -420,18 +470,43 @@
                     return selected;
                 }
             }
+            return [1, 2, 3, 5, 8];
+        }
+
+        function getOrthogonalNeighbors(cellNum) {
+            const r = Math.floor((cellNum - 1) / 3);
+            const c = (cellNum - 1) % 3;
+            const res = [];
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of dirs) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 0 && nr < 3 && nc >= 0 && nc < 3) {
+                    res.push(nr * 3 + nc + 1);
+                }
+            }
+            return res;
         }
 
         function validateIslandRules(cells) {
             const set = new Set(cells);
 
-            // 若出現在正中間 (5)，則 (2)(4)(6)(8) 至少出現任意兩格
-            if (set.has(5)) {
-                const crossNeighbors = [2, 4, 6, 8].filter(n => set.has(n)).length;
-                if (crossNeighbors < 2) return false;
+            // 規則 A：方塊出現在 (2)(4)(6)(8) 時，旁邊必須至少相連一格實心方塊
+            for (const crossCell of [2, 4, 6, 8]) {
+                if (set.has(crossCell)) {
+                    const neighbors = getOrthogonalNeighbors(crossCell);
+                    const hasAdjacent = neighbors.some(n => set.has(n));
+                    if (!hasAdjacent) return false;
+                }
             }
 
-            // 至少有三格上下左右連在一起
+            // 規則 B：當 (5) 為實心時，(2)(4)(6)(8) 至少必須有 2 格實心
+            if (set.has(5)) {
+                const crossCount = [2, 4, 6, 8].filter(n => set.has(n)).length;
+                if (crossCount < 2) return false;
+            }
+
+            // 規則 C：至少有三格上下左右連在一起
             let maxConnected = 0;
             const visited = new Set();
 
@@ -444,19 +519,10 @@
                 while (queue.length > 0) {
                     const curr = queue.shift();
                     compSize++;
-                    const r = Math.floor((curr - 1) / 3);
-                    const c = (curr - 1) % 3;
-
-                    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-                    for (const [dr, dc] of dirs) {
-                        const nr = r + dr;
-                        const nc = c + dc;
-                        if (nr >= 0 && nr < 3 && nc >= 0 && nc < 3) {
-                            const nextNode = nr * 3 + nc + 1;
-                            if (set.has(nextNode) && !visited.has(nextNode)) {
-                                visited.add(nextNode);
-                                queue.push(nextNode);
-                            }
+                    for (const nextNode of getOrthogonalNeighbors(curr)) {
+                        if (set.has(nextNode) && !visited.has(nextNode)) {
+                            visited.add(nextNode);
+                            queue.push(nextNode);
                         }
                     }
                 }
@@ -476,21 +542,29 @@
             initStage();
         }
 
+        function goToNextStage() {
+            if (!isStageCleared) return;
+            level++;
+            initStage();
+        }
+
         function initStage() {
             isStarted = true;
             isGameOver = false;
+            isStageCleared = false;
             isAnimating = false;
             usedIslands = 0;
+            clearedPath = [];
             hoverMacroIdx = null;
 
             document.getElementById('gameover-box').style.display = 'none';
+            document.getElementById('win-box').style.display = 'none';
             document.getElementById('dock-panel').style.display = 'flex';
             document.getElementById('max-limit').innerText = GAME_CONFIG.maxIslandsPerStage;
 
             macroOccupied = Array(16).fill(false);
             microLand = Array.from({ length: 12 }, () => Array(12).fill(0));
 
-            // 隨機變動入口（上方4大格任一格 + 九宮格 1/2/3 其一）與出口（下方4大格任一格 + 九宮格 7/8/9 其一）
             entryMacroCol = Math.floor(Math.random() * 4);
             entrySubCell = [1, 2, 3][Math.floor(Math.random() * 3)];
 
@@ -557,12 +631,13 @@
             const riverEl = document.getElementById('river-16');
             riverEl.innerHTML = '';
 
-            // 計算精確的入口與出口 12x12 微格座標
             const entryMicroR = 0;
             const entryMicroC = entryMacroCol * 3 + ((entrySubCell - 1) % 3);
 
             const exitMicroR = 11;
             const exitMicroC = exitMacroCol * 3 + ((exitSubCell - 1) % 3);
+
+            const pathSet = new Set(clearedPath.map(([r, c]) => `${r},${c}`));
 
             for (let mIdx = 0; mIdx < 16; mIdx++) {
                 const mRow = Math.floor(mIdx / 4);
@@ -584,7 +659,6 @@
                     microDiv.dataset.gr = gRow;
                     microDiv.dataset.gc = gCol;
 
-                    // 精準標示入口九宮格 (1)(2)(3) 其一 與 出口九宮格 (7)(8)(9) 其一
                     if (gRow === entryMicroR && gCol === entryMicroC) {
                         microDiv.classList.add('entry-spot');
                     }
@@ -595,18 +669,20 @@
                     if (microLand[gRow][gCol] === 1) {
                         microDiv.classList.add('land');
                     }
+                    if (pathSet.has(`${gRow},${gCol}`)) {
+                        microDiv.classList.add('path-highlight');
+                    }
                     macroDiv.appendChild(microDiv);
                 }
 
-                // 電腦滑鼠移動預覽與左鍵點擊放下
                 macroDiv.addEventListener('mouseenter', () => {
-                    if (isAnimating || isGameOver) return;
+                    if (!canInteractWithBoard()) return;
                     hoverMacroIdx = mIdx;
                     updateRiverPreview();
                 });
 
                 macroDiv.addEventListener('click', (e) => {
-                    if (e.button !== 0 || isAnimating || isGameOver) return;
+                    if (e.button !== 0 || !canInteractWithBoard()) return;
                     placeIslandInMacro(mIdx);
                 });
 
@@ -618,10 +694,9 @@
                 updateRiverPreview();
             };
 
-            // 手機觸控：上方偏移瞄準，滑動移動預覽，放開手指放下島嶼
             const stageEl = document.getElementById('iso-stage');
             stageEl.ontouchstart = (e) => {
-                if (isAnimating || isGameOver) return;
+                if (!canInteractWithBoard()) return;
                 const touch = e.touches[0];
                 const idx = getMacroIdxWithOffset(touch.clientX, touch.clientY);
                 if (idx !== null) {
@@ -631,7 +706,7 @@
             };
 
             stageEl.ontouchmove = (e) => {
-                if (isAnimating || isGameOver) return;
+                if (!canInteractWithBoard()) return;
                 const touch = e.touches[0];
                 const idx = getMacroIdxWithOffset(touch.clientX, touch.clientY);
                 if (idx !== hoverMacroIdx) {
@@ -641,7 +716,7 @@
             };
 
             stageEl.ontouchend = () => {
-                if (isAnimating || isGameOver) return;
+                if (!canInteractWithBoard()) return;
                 if (hoverMacroIdx !== null) {
                     const targetIdx = hoverMacroIdx;
                     hoverMacroIdx = null;
@@ -653,7 +728,10 @@
             updateRiverPreview();
         }
 
-        // 手指上方偏移瞄準：將偵測點往上偏移 touchOffsetY，避免手指遮擋預覽島嶼
+        function canInteractWithBoard() {
+            return !isAnimating && !isGameOver && !isStageCleared;
+        }
+
         function getMacroIdxWithOffset(clientX, clientY) {
             const aimedY = clientY - GAME_CONFIG.touchOffsetY;
             const el = document.elementFromPoint(clientX, aimedY);
@@ -670,7 +748,7 @@
                 m.querySelectorAll('.micro-cell').forEach(mc => mc.classList.remove('preview-land'));
             });
 
-            if (hoverMacroIdx === null || isAnimating || isGameOver) return;
+            if (hoverMacroIdx === null || !canInteractWithBoard()) return;
             const targetMacro = document.querySelector(`.macro-cell[data-midx="${hoverMacroIdx}"]`);
             if (!targetMacro) return;
 
@@ -686,7 +764,7 @@
         }
 
         function placeIslandInMacro(mIdx) {
-            if (isAnimating || isGameOver) return;
+            if (!canInteractWithBoard()) return;
 
             if (macroOccupied[mIdx]) {
                 playSound('bad');
@@ -712,6 +790,7 @@
 
             const path = findCatWalkPath();
             if (path) {
+                clearedPath = path;
                 animateCatCrossing(path);
                 return;
             }
@@ -727,7 +806,6 @@
             renderPiecePreview('next-piece-grid', nextPiece);
         }
 
-        // 精準從指定的入口微格走到指定的出口微格
         function findCatWalkPath() {
             const entryR = 0;
             const entryC = entryMacroCol * 3 + ((entrySubCell - 1) % 3);
@@ -794,12 +872,18 @@
                     catSprite.style.top = '284px';
                     catSprite.style.left = `${exitX - 18}px`;
                     document.getElementById('food-sprite').innerText = '😻';
-                    document.getElementById('msg-bar').innerText = `😋 吃飽喝足！準備進入第 ${level + 1} 關...`;
 
-                    setTimeout(() => {
-                        level++;
-                        initStage();
-                    }, 1800);
+                    isAnimating = false;
+                    isStageCleared = true;
+
+                    document.getElementById('msg-bar').innerText = `😋 第 ${level} 關完成！請欣賞過關路徑並點選「開始下一關」。`;
+                    document.getElementById('dock-panel').style.display = 'none';
+                    document.getElementById('win-box').style.display = 'block';
+                    document.getElementById('win-title').innerText = `🎉 恭喜通過第 ${level} 關！`;
+                    document.getElementById('win-desc').innerHTML = `
+                        本關使用 <b>${usedIslands}</b> 塊島嶼，獲得 <b>+${stageScore}</b> 分（路徑共 <b>${path.length}</b> 格）！<br>
+                        目前累計總分：<b>${totalScore}</b> 分
+                    `;
                 }
             }, 130);
         }
@@ -811,6 +895,7 @@
 
             document.getElementById('msg-bar').innerText = '💥 10 個島嶼已用完，貓咪過不了河！';
             document.getElementById('dock-panel').style.display = 'none';
+            document.getElementById('win-box').style.display = 'none';
             document.getElementById('gameover-box').style.display = 'block';
             document.getElementById('gameover-title').innerText = `😿 第 ${level} 關挑戰失敗！`;
             document.getElementById('gameover-desc').innerHTML = `
