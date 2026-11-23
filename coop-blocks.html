@@ -94,7 +94,7 @@
         .profile-box {
             display: flex;
             flex-wrap: wrap;
-            gap: 14px;
+            gap: 12px 16px;
             align-items: center;
             margin: 12px 0;
             padding: 12px;
@@ -259,6 +259,22 @@
             gap: 8px;
             box-sizing: border-box;
         }
+        .timer-pill {
+            font-weight: 900;
+            font-size: 0.98rem;
+            padding: 4px 10px;
+            border-radius: 10px;
+            background: var(--bg-sub);
+            border: 1px solid var(--border-line);
+        }
+        .timer-pill.urgent {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+        [data-theme="dark"] .timer-pill.urgent {
+            color: #fca5a5;
+        }
         .conn-dot {
             display: inline-flex;
             align-items: center;
@@ -302,7 +318,6 @@
             color: #fbbf24;
         }
 
-        /* 斷線提示條 */
         .disconnect-banner {
             width: 100%;
             background: rgba(239, 68, 68, 0.14);
@@ -317,7 +332,6 @@
             box-sizing: border-box;
         }
 
-        /* 棋盤上方精簡道具列（僅圖示＋數量） */
         .top-items-bar {
             width: 100%;
             max-width: 560px;
@@ -607,6 +621,24 @@
                     <option value="14">14 × 14</option>
                 </select>
             </label>
+            <label>
+                <strong>遊戲難度：</strong>
+                <select id="select-difficulty" class="select-box">
+                    <option value="easy">簡單（多 1～3 格）</option>
+                    <option value="medium" selected>中等（預設）</option>
+                    <option value="hard">難（多大型 5 格）</option>
+                </select>
+            </label>
+            <label>
+                <strong>時間模式：</strong>
+                <select id="select-time-limit" class="select-box">
+                    <option value="0" selected>不限時（訓練模式）</option>
+                    <option value="60">限時 1 分鐘</option>
+                    <option value="120">限時 2 分鐘</option>
+                    <option value="180">限時 3 分鐘</option>
+                    <option value="300">限時 5 分鐘</option>
+                </select>
+            </label>
         </div>
 
         <label class="offset-check" style="margin-bottom: 12px;">
@@ -617,11 +649,11 @@
         <div class="mode-cards">
             <button type="button" class="mode-btn-card" id="btn-start-solo">
                 <h3>👤 單人模式</h3>
-                <p>依目前選擇的棋盤大小開始個人挑戰，挑戰最高紀錄。</p>
+                <p>依目前選擇的棋盤大小、難度與時間設定開始個人挑戰。</p>
             </button>
             <button type="button" class="mode-btn-card" id="btn-create-room">
                 <h3>🏠 建立雙人房間</h3>
-                <p>依目前選擇的棋盤大小建立房間，分享房號邀請好友。</p>
+                <p>依目前選擇的棋盤大小、難度與時間設定建立房間。</p>
             </button>
             <button type="button" class="mode-btn-card" id="btn-focus-join">
                 <h3>🔗 加入雙人房間</h3>
@@ -661,6 +693,7 @@
                 <strong id="mode-badge"></strong>
                 <span style="font-size: 1.15rem; font-weight: 900;">🏆 分數：<span id="hud-score">0</span></span>
                 <span class="muted" style="font-weight: 700;">最高：<span id="hud-best">0</span></span>
+                <span id="hud-timer" class="timer-pill">⏱ 不限時</span>
                 <span id="hud-conn-badge" class="conn-dot hidden">
                     <span id="hud-conn-dot" class="dot-circle"></span>
                     <span id="hud-conn-text">已連線</span>
@@ -669,7 +702,6 @@
             <div id="hud-toast" class="status-pill">點選或拖曳方塊放到棋盤上！</div>
         </div>
 
-        <!-- 斷線恢復提示列 -->
         <div id="disconnect-banner" class="disconnect-banner hidden">
             <span style="font-weight: 700;">⚠️ 與隊友的連線已中斷，可嘗試重新連線或改為單人繼續。</span>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -680,7 +712,6 @@
 
         <div class="game-main">
             <div class="board-column">
-                <!-- 棋盤上方精簡道具列（僅圖示＋數量） -->
                 <div class="top-items-bar">
                     <div id="items-el" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
                     <button type="button" class="btn-ui hidden" id="btn-cancel-item" style="padding: 6px 10px; font-size: 0.88rem;">✖</button>
@@ -712,9 +743,11 @@
     <div id="gameover-modal" class="modal-bg">
         <div class="modal-box">
             <h2 style="margin-top: 0;">🎉 遊戲結束！</h2>
+            <p id="end-reason" class="muted" style="margin: 4px 0 8px 0; font-size: 0.92rem;"></p>
             <p id="final-score" style="font-size: 1.45rem; font-weight: 900; margin: 10px 0;"></p>
             <p id="record-flag" class="hidden" style="color: #16a34a; font-weight: 700;">🌟 刷新最高紀錄！</p>
             <p id="final-stats" class="muted" style="font-size: 0.95rem;"></p>
+            <p id="replay-wait-note" class="muted hidden" style="font-size: 0.88rem; margin-top: 8px;"></p>
             <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
                 <button type="button" class="btn-green" id="btn-replay">🔄 再玩一局</button>
                 <button type="button" class="btn-ui" id="btn-modal-lobby">🏠 回到大廳</button>
@@ -725,6 +758,8 @@
     <script>
         const GAME_CONFIG = {
             DEFAULT_BOARD_SIZE: 9,
+            DEFAULT_DIFFICULTY: 'medium',
+            DEFAULT_TIME_LIMIT: 0,
             HAND_SIZE: 3,
             ITEM_DROP_RATE: 0.05,
             ITEM_WEIGHTS: {
@@ -737,8 +772,23 @@
             LINE_BASE_SCORE: 100,
             ITEM_CELL_BONUS: 30,
             ITEM_CLEAR_PER_CELL: 5,
-            HEARTBEAT_MS: 3000,
-            STALE_TIMEOUT_MS: 9000
+            HEARTBEAT_MS: 3500,
+            STALE_TIMEOUT_MS: 16000,
+            PEER_CONFIG: {
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
+                    ]
+                }
+            }
+        };
+
+        const DIFFICULTY_META = {
+            easy:   { label: '簡單', smallWeight: 0.72, midWeight: 0.22, largeWeight: 0.06 },
+            medium: { label: '中等', smallWeight: 0.45, midWeight: 0.35, largeWeight: 0.20 },
+            hard:   { label: '難',   smallWeight: 0.22, midWeight: 0.36, largeWeight: 0.42 }
         };
 
         const PALETTE = [
@@ -750,26 +800,33 @@
             { name: '青提色', hex: '#0d9488' }
         ];
 
-        const SHAPES = [
-            [[1]],
-            [[1, 1]], [[1], [1]],
-            [[1, 1, 1]], [[1], [1], [1]],
-            [[1, 0], [1, 1]], [[0, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]],
-            [[1, 1], [1, 1]],
-            [[1, 1, 1, 1]], [[1], [1], [1], [1]],
-            [[1, 1, 0], [0, 1, 1]], [[0, 1, 1], [1, 1, 0]],
-            [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]],
-            [[1, 1, 1], [0, 1, 0]], [[0, 1, 0], [1, 1, 1]],
-            [[1, 1, 1, 1, 1]], [[1], [1], [1], [1], [1]],
-            [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
-            [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
-            [[1, 0, 1], [1, 1, 1]], [[1, 1, 1], [1, 0, 1]],
-            [[1, 1], [1, 0], [1, 1]], [[1, 1], [0, 1], [1, 1]],
-            [[1, 1, 1], [0, 1, 0], [0, 1, 0]], [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
-            [[1, 0, 0], [1, 1, 1], [1, 0, 0]], [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
-            [[1, 1, 0], [0, 1, 1], [0, 0, 1]], [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
-            [[1, 0, 0], [1, 1, 0], [0, 1, 1]], [[0, 0, 1], [0, 1, 1], [1, 1, 0]]
-        ];
+        // 依格數分群：1～3 格（small）、4 格（mid）、5 格（large）
+        const SHAPE_GROUPS = {
+            small: [
+                [[1]],
+                [[1, 1]], [[1], [1]],
+                [[1, 1, 1]], [[1], [1], [1]],
+                [[1, 0], [1, 1]], [[0, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]]
+            ],
+            mid: [
+                [[1, 1], [1, 1]],
+                [[1, 1, 1, 1]], [[1], [1], [1], [1]],
+                [[1, 1, 0], [0, 1, 1]], [[0, 1, 1], [1, 1, 0]],
+                [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]],
+                [[1, 1, 1], [0, 1, 0]], [[0, 1, 0], [1, 1, 1]]
+            ],
+            large: [
+                [[1, 1, 1, 1, 1]], [[1], [1], [1], [1], [1]],
+                [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
+                [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+                [[1, 0, 1], [1, 1, 1]], [[1, 1, 1], [1, 0, 1]],
+                [[1, 1], [1, 0], [1, 1]], [[1, 1], [0, 1], [1, 1]],
+                [[1, 1, 1], [0, 1, 0], [0, 1, 0]], [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
+                [[1, 0, 0], [1, 1, 1], [1, 0, 0]], [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
+                [[1, 1, 0], [0, 1, 1], [0, 0, 1]], [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
+                [[1, 0, 0], [1, 1, 0], [0, 1, 1]], [[0, 0, 1], [0, 1, 1], [1, 1, 0]]
+            ]
+        };
 
         const ITEMS = {
             bomb:   { icon: '💣', name: '範圍炸彈' },
@@ -782,7 +839,9 @@
             name: 'coop_blocks_name',
             color: 'coop_blocks_color',
             offset: 'coop_blocks_offset',
-            boardSize: 'coop_blocks_board_size'
+            boardSize: 'coop_blocks_board_size',
+            difficulty: 'coop_blocks_difficulty',
+            timeLimit: 'coop_blocks_time_limit'
         };
 
         function ensureValidColor(hex) {
@@ -794,13 +853,24 @@
             return [7, 9, 11, 14].includes(n) ? n : GAME_CONFIG.DEFAULT_BOARD_SIZE;
         }
 
+        function ensureValidDifficulty(val) {
+            return ['easy', 'medium', 'hard'].includes(val) ? val : GAME_CONFIG.DEFAULT_DIFFICULTY;
+        }
+
+        function ensureValidTimeLimit(val) {
+            const n = parseInt(val, 10);
+            return [0, 60, 120, 180, 300].includes(n) ? n : GAME_CONFIG.DEFAULT_TIME_LIMIT;
+        }
+
         const profile = {
             name: localStorage.getItem(KEYS.name) || '玩家',
             color: ensureValidColor(localStorage.getItem(KEYS.color)),
             offset: localStorage.getItem(KEYS.offset) === null
                 ? true
                 : localStorage.getItem(KEYS.offset) === 'true',
-            boardSize: ensureValidBoardSize(localStorage.getItem(KEYS.boardSize))
+            boardSize: ensureValidBoardSize(localStorage.getItem(KEYS.boardSize)),
+            difficulty: ensureValidDifficulty(localStorage.getItem(KEYS.difficulty)),
+            timeLimit: ensureValidTimeLimit(localStorage.getItem(KEYS.timeLimit))
         };
         localStorage.setItem(KEYS.color, profile.color);
 
@@ -809,8 +879,13 @@
             isHost: true,
             playing: false,
             over: false,
+            endReason: '',
             boardSize: profile.boardSize,
+            difficulty: profile.difficulty,
+            timeLimit: profile.timeLimit,
+            remainingSec: 0,
             score: 0,
+            matchId: 0,
             snapVersion: 0,
             board: [],
             hands: { local: [], remote: [] },
@@ -836,6 +911,7 @@
         let roomCode = '';
         let builtBoardSize = 0;
         let heartbeatTimer = null;
+        let countdownTimer = null;
 
         function safeSound(type) {
             try {
@@ -897,6 +973,59 @@
             el.classList.toggle('flash', !!flash);
         }
 
+        function formatSeconds(sec) {
+            const s = Math.max(0, Math.floor(sec));
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+        }
+
+        function renderTimerUI() {
+            const el = document.getElementById('hud-timer');
+            if (!el) return;
+            if (!state.timeLimit) {
+                el.textContent = '⏱ 不限時訓練';
+                el.classList.remove('urgent');
+            } else {
+                el.textContent = `⏱ ${formatSeconds(state.remainingSec)}`;
+                el.classList.toggle('urgent', state.remainingSec <= 15 && state.playing && !state.over);
+            }
+        }
+
+        function startCountdown() {
+            stopCountdown();
+            renderTimerUI();
+            if (!state.timeLimit) return;
+
+            countdownTimer = setInterval(() => {
+                if (!state.playing || state.over) {
+                    stopCountdown();
+                    return;
+                }
+                if (state.mode === 'multiplayer' && !state.isHost) {
+                    return;
+                }
+                state.remainingSec = Math.max(0, state.remainingSec - 1);
+                renderTimerUI();
+
+                if (state.mode === 'multiplayer' && state.isHost) {
+                    sendData({ type: 'tick', remainingSec: state.remainingSec });
+                }
+
+                if (state.remainingSec <= 0) {
+                    stopCountdown();
+                    finishGame('時間到！限時挑戰結束');
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
         function updateConnStatusUI(status, label) {
             const badge = document.getElementById('hud-conn-badge');
             const dot = document.getElementById('hud-conn-dot');
@@ -916,7 +1045,7 @@
                 banner.classList.add('hidden');
             } else if (status === 'reconnecting') {
                 dot.classList.add('warn');
-                text.textContent = label || '重新連線中...';
+                text.textContent = label || '連線中...';
             } else {
                 dot.classList.add('err');
                 text.textContent = label || '已斷線';
@@ -926,6 +1055,7 @@
 
         function startHeartbeat() {
             stopHeartbeat();
+            state.lastPongAt = Date.now();
             heartbeatTimer = setInterval(() => {
                 if (state.mode !== 'multiplayer') return;
                 if (conn && conn.open) {
@@ -947,11 +1077,14 @@
         }
 
         function handleDisconnected(reason) {
-            if (!state.connected && state.mode !== 'multiplayer') return;
+            if (state.mode !== 'multiplayer') return;
+            const wasConnected = state.connected;
             state.connected = false;
             updateConnStatusUI('err', '已斷線');
-            setToast(`⚠️ ${reason}`, true);
             document.getElementById('conn-msg').textContent = `${reason}，可點擊「重新連線」或改為單人繼續。`;
+            if (wasConnected || state.playing) {
+                setToast(`⚠️ ${reason}`, true);
+            }
         }
 
         function reconnectPeer() {
@@ -959,7 +1092,7 @@
             updateConnStatusUI('reconnecting', '重新連線中...');
             setToast('🔄 正在嘗試重新連線...', true);
             if (state.isHost) {
-                createRoom(roomCode);
+                createRoom(roomCode, true);
             } else {
                 document.getElementById('input-room-code').value = roomCode;
                 joinRoom();
@@ -972,10 +1105,16 @@
             state.mode = 'solo';
             state.isHost = true;
             state.connected = false;
+            state.over = false;
+            state.playing = true;
+            document.getElementById('gameover-modal').style.display = 'none';
             document.getElementById('disconnect-banner').classList.add('hidden');
             document.getElementById('hud-conn-badge').classList.add('hidden');
             document.getElementById('mate-box').classList.add('hidden');
-            document.getElementById('mode-badge').textContent = `👤 單人模式（${state.boardSize}×${state.boardSize}）`;
+            updateModeBadge();
+            startCountdown();
+            renderHand();
+            renderItems();
             setToast('已切換為單人模式，可繼續遊玩！', true);
         }
 
@@ -992,6 +1131,23 @@
             document.documentElement.style.setProperty('--cell-size', size + 'px');
         }
 
+        function updateModeBadge() {
+            const isMp = state.mode === 'multiplayer';
+            const diffLabel = (DIFFICULTY_META[state.difficulty] || DIFFICULTY_META.medium).label;
+            const timeLabel = state.timeLimit ? `${Math.floor(state.timeLimit / 60)}分限時` : '不限時';
+            document.getElementById('mode-badge').textContent =
+                `${isMp ? '🤝 雙人合作' : '👤 單人模式'}（${state.boardSize}×${state.boardSize}・${diffLabel}・${timeLabel}）`;
+        }
+
+        function syncLobbySettingsFromUI() {
+            profile.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
+            profile.difficulty = ensureValidDifficulty(document.getElementById('select-difficulty').value);
+            profile.timeLimit = ensureValidTimeLimit(document.getElementById('select-time-limit').value);
+            localStorage.setItem(KEYS.boardSize, String(profile.boardSize));
+            localStorage.setItem(KEYS.difficulty, profile.difficulty);
+            localStorage.setItem(KEYS.timeLimit, String(profile.timeLimit));
+        }
+
         function initLobby() {
             const nameEl = document.getElementById('input-name');
             nameEl.value = profile.name;
@@ -1005,8 +1161,21 @@
             const sizeSelect = document.getElementById('select-board-size');
             sizeSelect.value = String(profile.boardSize);
             sizeSelect.addEventListener('change', () => {
-                profile.boardSize = ensureValidBoardSize(sizeSelect.value);
-                localStorage.setItem(KEYS.boardSize, String(profile.boardSize));
+                syncLobbySettingsFromUI();
+                updateWaitingBoardInfo();
+            });
+
+            const diffSelect = document.getElementById('select-difficulty');
+            diffSelect.value = profile.difficulty;
+            diffSelect.addEventListener('change', () => {
+                syncLobbySettingsFromUI();
+                updateWaitingBoardInfo();
+            });
+
+            const timeSelect = document.getElementById('select-time-limit');
+            timeSelect.value = String(profile.timeLimit);
+            timeSelect.addEventListener('change', () => {
+                syncLobbySettingsFromUI();
                 updateWaitingBoardInfo();
             });
 
@@ -1040,7 +1209,7 @@
             document.getElementById('btn-lobby-back').addEventListener('click', backToLobby);
             document.getElementById('btn-modal-lobby').addEventListener('click', backToLobby);
             document.getElementById('btn-start-solo').addEventListener('click', startSolo);
-            document.getElementById('btn-create-room').addEventListener('click', () => createRoom());
+            document.getElementById('btn-create-room').addEventListener('click', () => createRoom('', false));
             document.getElementById('btn-focus-join').addEventListener('click', () => {
                 const inp = document.getElementById('input-room-code');
                 inp.focus();
@@ -1082,7 +1251,10 @@
 
         function updateWaitingBoardInfo() {
             const el = document.getElementById('waiting-board-info');
-            if (el) el.textContent = `棋盤尺寸：${state.boardSize} × ${state.boardSize}`;
+            if (!el) return;
+            const diffLabel = (DIFFICULTY_META[state.difficulty] || DIFFICULTY_META.medium).label;
+            const timeLabel = state.timeLimit ? `${Math.floor(state.timeLimit / 60)} 分鐘` : '不限時訓練';
+            el.textContent = `棋盤尺寸：${state.boardSize} × ${state.boardSize}｜難度：${diffLabel}｜時間：${timeLabel}`;
         }
 
         function publicProfile() {
@@ -1092,10 +1264,13 @@
         function startSolo() {
             closePeer();
             stopHeartbeat();
+            syncLobbySettingsFromUI();
             state.mode = 'solo';
             state.isHost = true;
             state.connected = false;
-            state.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
+            state.boardSize = profile.boardSize;
+            state.difficulty = profile.difficulty;
+            state.timeLimit = profile.timeLimit;
             resetMatch();
             showGame();
         }
@@ -1107,7 +1282,7 @@
             return s;
         }
 
-        function createRoom(reuseCode = '') {
+        function createRoom(reuseCode = '', keepMatch = false) {
             if (typeof Peer === 'undefined') {
                 document.getElementById('lobby-msg').textContent = '連線元件尚未就緒，請稍後再試或先玩單人模式。';
                 return;
@@ -1117,7 +1292,12 @@
             state.isHost = true;
             state.ready = false;
             state.connected = false;
-            state.boardSize = ensureValidBoardSize(document.getElementById('select-board-size').value);
+            if (!keepMatch) {
+                syncLobbySettingsFromUI();
+                state.boardSize = profile.boardSize;
+                state.difficulty = profile.difficulty;
+                state.timeLimit = profile.timeLimit;
+            }
             roomCode = reuseCode || makeCode(5);
 
             document.getElementById('waiting-box').classList.remove('hidden');
@@ -1126,22 +1306,38 @@
             document.getElementById('btn-start-mp').classList.remove('hidden');
             document.getElementById('btn-start-mp').disabled = true;
             document.getElementById('conn-msg').textContent = '建立房間中，等待訪客加入...';
-            updateConnStatusUI('reconnecting', '等待連線');
+            updateConnStatusUI('reconnecting', '連線中');
             renderPlayers();
             startHeartbeat();
 
-            peer = new Peer('coopblk-' + roomCode);
-            peer.on('open', () => {
-                document.getElementById('conn-msg').textContent = '房間已建立！請分享房號或連結。';
-            });
-            peer.on('connection', c => {
-                conn = c;
-                bindConn();
-            });
-            peer.on('error', err => {
-                document.getElementById('conn-msg').textContent = '連線提示：' + (err.type || err);
-                updateConnStatusUI('err', '連線異常');
-            });
+            const spawnPeer = (codeToUse) => {
+                const p = new Peer('coopblk-' + codeToUse, GAME_CONFIG.PEER_CONFIG);
+                p.on('open', () => {
+                    document.getElementById('conn-msg').textContent = '房間已建立！請分享房號或連結。';
+                    if (state.playing) {
+                        updateConnStatusUI('reconnecting', '等待重連');
+                    }
+                });
+                p.on('connection', c => {
+                    conn = c;
+                    bindConn();
+                });
+                p.on('error', err => {
+                    if (err && err.type === 'unavailable-id' && !reuseCode) {
+                        const nextCode = makeCode(5);
+                        roomCode = nextCode;
+                        document.getElementById('room-code-text').textContent = roomCode;
+                        try { p.destroy(); } catch (_) {}
+                        peer = spawnPeer(nextCode);
+                        return;
+                    }
+                    document.getElementById('conn-msg').textContent = '連線提示：' + (err.type || err);
+                    updateConnStatusUI('err', '連線異常');
+                });
+                return p;
+            };
+
+            peer = spawnPeer(roomCode);
         }
 
         function joinRoom() {
@@ -1163,14 +1359,14 @@
 
             document.getElementById('waiting-box').classList.remove('hidden');
             document.getElementById('room-code-text').textContent = roomCode;
-            document.getElementById('waiting-board-info').textContent = '棋盤尺寸：由房主開局同步';
+            document.getElementById('waiting-board-info').textContent = '棋盤尺寸、難度與時間：由房主開局同步';
             document.getElementById('btn-start-mp').classList.add('hidden');
             document.getElementById('conn-msg').textContent = '正在連線至房主...';
             updateConnStatusUI('reconnecting', '連線中...');
             renderPlayers();
             startHeartbeat();
 
-            peer = new Peer();
+            peer = new Peer(GAME_CONFIG.PEER_CONFIG);
             peer.on('open', () => {
                 conn = peer.connect('coopblk-' + roomCode, { reliable: true });
                 bindConn();
@@ -1182,6 +1378,7 @@
         }
 
         function bindConn() {
+            if (!conn) return;
             conn.on('open', () => {
                 state.connected = true;
                 state.lastPongAt = Date.now();
@@ -1189,7 +1386,7 @@
                 updateConnStatusUI('ok', '已連線');
                 sendData({ type: 'profile', profile: publicProfile() });
                 if (state.mode === 'multiplayer' && state.isHost && state.playing) {
-                    sendData({ type: 'snap', snap: snapshot() });
+                    sendData({ type: 'snap', snap: snapshot(false) });
                 }
             });
             conn.on('data', handleData);
@@ -1246,6 +1443,7 @@
 
         function backToLobby() {
             stopHeartbeat();
+            stopCountdown();
             document.getElementById('gameover-modal').style.display = 'none';
             document.getElementById('game-view').classList.add('hidden');
             document.getElementById('btn-lobby-back').classList.add('hidden');
@@ -1257,16 +1455,16 @@
         function showGame() {
             document.getElementById('lobby-view').classList.add('hidden');
             document.getElementById('gameover-modal').style.display = 'none';
+            document.getElementById('replay-wait-note').classList.add('hidden');
             document.getElementById('game-view').classList.remove('hidden');
             document.getElementById('btn-lobby-back').classList.remove('hidden');
 
             applyBoardCellSize();
-            const isMp = state.mode === 'multiplayer';
-            document.getElementById('mode-badge').textContent =
-                `${isMp ? '🤝 雙人合作' : '👤 單人模式'}（${state.boardSize}×${state.boardSize}）`;
+            updateModeBadge();
+            renderTimerUI();
 
             const mateBox = document.getElementById('mate-box');
-            if (isMp) {
+            if (state.mode === 'multiplayer') {
                 mateBox.classList.remove('hidden');
                 mateBox.innerHTML = `夥伴：<strong>${state.mate.name}</strong>`;
                 updateConnStatusUI(state.connected ? 'ok' : 'err', state.connected ? '已連線' : '已斷線');
@@ -1293,8 +1491,20 @@
             return 'bomb';
         }
 
+        function pickShapeByDifficulty() {
+            const cfg = DIFFICULTY_META[state.difficulty] || DIFFICULTY_META.medium;
+            const r = Math.random();
+            let groupKey = 'medium';
+            if (r < cfg.smallWeight) groupKey = 'small';
+            else if (r < cfg.smallWeight + cfg.midWeight) groupKey = 'mid';
+            else groupKey = 'large';
+
+            const pool = SHAPE_GROUPS[groupKey] || SHAPE_GROUPS.mid;
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
         function newPiece() {
-            const tpl = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            const tpl = pickShapeByDifficulty();
             return {
                 matrix: tpl.map(row =>
                     row.map(v => v ? { filled: true, item: Math.random() < GAME_CONFIG.ITEM_DROP_RATE ? pickItem() : null } : null)
@@ -1308,8 +1518,11 @@
 
         function resetMatch() {
             const n = state.boardSize;
+            state.matchId += 1;
             state.board = Array.from({ length: n }, () => Array(n).fill(null));
             state.score = 0;
+            state.remainingSec = state.timeLimit;
+            state.endReason = '';
             state.snapVersion = 0;
             state.playing = true;
             state.over = false;
@@ -1322,24 +1535,30 @@
             state.items.remote = { bomb: 1, col: 1, row: 1, reroll: 1 };
             state.stats.local = { cells: 0, lines: 0 };
             state.stats.remote = { cells: 0, lines: 0 };
-            setToast(`${n}×${n} 棋盤開局！3 塊用完才補新一批。`);
+            startCountdown();
+            setToast(`${n}×${n} 開局！3 塊用完才補新一批。`);
         }
 
         function hostStart() {
             if (!state.isHost) return;
             resetMatch();
             showGame();
-            sendData({ type: 'snap', snap: snapshot() });
+            sendData({ type: 'snap', snap: snapshot(true) });
         }
 
-        function snapshot() {
-            state.snapVersion += 1;
+        function snapshot(incVersion = true) {
+            if (incVersion) state.snapVersion += 1;
             return {
+                matchId: state.matchId,
                 version: state.snapVersion,
                 boardSize: state.boardSize,
+                difficulty: state.difficulty,
+                timeLimit: state.timeLimit,
+                remainingSec: state.remainingSec,
                 board: state.board,
                 score: state.score,
                 over: state.over,
+                endReason: state.endReason,
                 stats: state.stats,
                 hostHand: state.hands.local,
                 guestHand: state.hands.remote,
@@ -1348,25 +1567,58 @@
             };
         }
 
+        // 同步快照時，若非新開局且原本手上有提起的方塊，保留 pickedSlot 與 hoverPos，避免被迫重提
         function applySnap(s) {
             if (!s) return;
-            if (typeof s.version === 'number' && s.version < state.snapVersion) return;
-            if (typeof s.version === 'number') state.snapVersion = s.version;
+            const isNewMatch = typeof s.matchId === 'number' && s.matchId !== state.matchId;
+            if (!isNewMatch && typeof s.version === 'number' && s.version < state.snapVersion) return;
+            if (isNewMatch) {
+                state.matchId = s.matchId;
+                state.snapVersion = typeof s.version === 'number' ? s.version : 0;
+            } else if (typeof s.version === 'number') {
+                state.snapVersion = s.version;
+            }
+
+            const prevPicked = !isNewMatch ? state.pickedSlot : null;
+            const prevHover = !isNewMatch ? state.hoverPos : null;
 
             state.boardSize = ensureValidBoardSize(s.boardSize);
+            state.difficulty = ensureValidDifficulty(s.difficulty);
+            state.timeLimit = ensureValidTimeLimit(s.timeLimit);
+            if (typeof s.remainingSec === 'number') {
+                state.remainingSec = s.remainingSec;
+            }
             state.board = s.board;
             state.score = s.score;
-            state.over = s.over;
+            state.over = !!s.over;
+            state.endReason = s.endReason || '';
             state.stats = s.stats;
             state.hands.local = s.guestHand;
             state.hands.remote = s.hostHand;
             state.items.local = s.guestItems;
             state.items.remote = s.hostItems;
-            state.playing = true;
-            state.pickedSlot = null;
+            state.playing = !state.over;
             state.armedTool = null;
+
+            if (prevPicked !== null && state.hands.local[prevPicked]) {
+                state.pickedSlot = prevPicked;
+                state.hoverPos = prevHover;
+            } else {
+                state.pickedSlot = null;
+                state.hoverPos = null;
+            }
+
             showGame();
-            if (state.over) openGameOver();
+            if (state.playing && state.timeLimit > 0) {
+                renderTimerUI();
+            }
+            if (isNewMatch && !state.over) {
+                setToast('🔄 新的一局已開始，雙方手牌與棋盤已同步！', true);
+            }
+            if (state.over) {
+                stopCountdown();
+                openGameOver();
+            }
         }
 
         function handleData(msg) {
@@ -1380,6 +1632,11 @@
             } else if (msg.type === 'pong') {
                 const rtt = Math.max(1, Date.now() - (msg.t || Date.now()));
                 updateConnStatusUI('ok', `已連線 (${rtt}ms)`);
+            } else if (msg.type === 'tick') {
+                if (typeof msg.remainingSec === 'number') {
+                    state.remainingSec = msg.remainingSec;
+                    renderTimerUI();
+                }
             } else if (msg.type === 'profile') {
                 state.mate = { ...state.mate, ...msg.profile };
                 renderPlayers();
@@ -1479,7 +1736,7 @@
                     sendData({ type: 'toast', text: '隊友搶先一步放這了！' });
                 }
                 if (state.mode === 'multiplayer' && state.isHost) {
-                    sendData({ type: 'snap', snap: snapshot() });
+                    sendData({ type: 'snap', snap: snapshot(true) });
                 }
                 renderBoard();
                 renderHand();
@@ -1517,6 +1774,14 @@
             syncAll();
         }
 
+        function collectItemAt(who, r, c, gotList) {
+            const cell = state.board[r] && state.board[r][c];
+            if (cell && cell.item && ITEMS[cell.item]) {
+                state.items[who][cell.item] = (state.items[who][cell.item] || 0) + 1;
+                gotList.push(ITEMS[cell.item].icon);
+            }
+        }
+
         function clearFullLines(who) {
             const n = state.boardSize;
             const rows = [];
@@ -1541,20 +1806,14 @@
 
             const got = [];
             const coords = [];
-            let itemCells = 0;
             targets.forEach(key => {
                 const [r, c] = key.split(',').map(Number);
                 coords.push([r, c]);
-                const cell = state.board[r][c];
-                if (cell && cell.item) {
-                    state.items[who][cell.item] = (state.items[who][cell.item] || 0) + 1;
-                    got.push(ITEMS[cell.item].icon);
-                    itemCells++;
-                }
+                collectItemAt(who, r, c, got);
                 state.board[r][c] = null;
             });
 
-            const pts = lines * GAME_CONFIG.LINE_BASE_SCORE + (lines > 1 ? (lines - 1) * 50 : 0) + itemCells * GAME_CONFIG.ITEM_CELL_BONUS;
+            const pts = lines * GAME_CONFIG.LINE_BASE_SCORE + (lines > 1 ? (lines - 1) * 50 : 0) + got.length * GAME_CONFIG.ITEM_CELL_BONUS;
             state.score += pts;
             state.stats[who].lines += lines;
             safeSound('clear');
@@ -1616,6 +1875,7 @@
             }
         }
 
+        // 道具清除範圍內的方塊若帶有道具，也一併領取加入操作者背包
         function applyItem(who, tool, r, c) {
             if ((state.items[who][tool] || 0) <= 0) return;
             state.items[who][tool] -= 1;
@@ -1631,6 +1891,8 @@
                 const n = state.boardSize;
                 let cleared = 0;
                 const fxCoords = [];
+                const got = [];
+
                 if (tool === 'bomb') {
                     for (let dr = -1; dr <= 1; dr++) {
                         for (let dc = -1; dc <= 1; dc++) {
@@ -1638,6 +1900,7 @@
                             if (nr >= 0 && nr < n && nc >= 0 && nc < n) {
                                 fxCoords.push([nr, nc]);
                                 if (state.board[nr][nc]) {
+                                    collectItemAt(who, nr, nc, got);
                                     state.board[nr][nc] = null;
                                     cleared++;
                                 }
@@ -1647,15 +1910,24 @@
                 } else if (tool === 'col') {
                     for (let nr = 0; nr < n; nr++) {
                         fxCoords.push([nr, c]);
-                        if (state.board[nr][c]) { state.board[nr][c] = null; cleared++; }
+                        if (state.board[nr][c]) {
+                            collectItemAt(who, nr, c, got);
+                            state.board[nr][c] = null;
+                            cleared++;
+                        }
                     }
                 } else if (tool === 'row') {
                     for (let nc = 0; nc < n; nc++) {
                         fxCoords.push([r, nc]);
-                        if (state.board[r][nc]) { state.board[r][nc] = null; cleared++; }
+                        if (state.board[r][nc]) {
+                            collectItemAt(who, r, nc, got);
+                            state.board[r][nc] = null;
+                            cleared++;
+                        }
                     }
                 }
-                const pts = cleared * GAME_CONFIG.ITEM_CLEAR_PER_CELL;
+
+                const pts = cleared * GAME_CONFIG.ITEM_CLEAR_PER_CELL + got.length * GAME_CONFIG.ITEM_CELL_BONUS;
                 state.score += pts;
                 safeSound('clear');
                 vibrateFeedback([40, 20, 40]);
@@ -1666,7 +1938,9 @@
                     sendData({ type: 'fx', coords: fxCoords, fxType: 'bomb', label: popLabel });
                 }
 
-                const text = `${ITEMS[tool].icon} 清除 ${cleared} 格（+${pts} 分）！`;
+                const text = got.length
+                    ? `${ITEMS[tool].icon} 清除 ${cleared} 格（+${pts} 分）並回收 ${got.join(' ')}！`
+                    : `${ITEMS[tool].icon} 清除 ${cleared} 格（+${pts} 分）！`;
                 if (who === 'local') setToast(text, true);
                 else sendData({ type: 'toast', text });
             }
@@ -1679,6 +1953,19 @@
             return hand.some(p => p && canPiecePlaceAnywhere(p));
         }
 
+        function finishGame(reason) {
+            if (state.over) return;
+            stopCountdown();
+            state.over = true;
+            state.playing = false;
+            state.endReason = reason || '無可放置的方塊';
+            const isNew = safeSaveScore(state.score);
+            if (state.mode === 'multiplayer' && state.isHost) {
+                sendData({ type: 'snap', snap: snapshot(true) });
+            }
+            openGameOver(isNew);
+        }
+
         function checkEnd() {
             const localCanPlace = hasAnyPlaceableHand(state.hands.local);
             const remoteCanPlace = state.mode === 'multiplayer'
@@ -1686,15 +1973,13 @@
                 : false;
 
             if (!localCanPlace && !remoteCanPlace) {
-                state.over = true;
-                const isNew = safeSaveScore(state.score);
-                openGameOver(isNew);
+                finishGame('所有方塊皆無法放入棋盤');
             }
         }
 
         function syncAll() {
             if (state.mode === 'multiplayer' && state.isHost) {
-                sendData({ type: 'snap', snap: snapshot() });
+                sendData({ type: 'snap', snap: snapshot(true) });
             }
             renderBoard();
             renderHand();
@@ -1703,25 +1988,42 @@
         }
 
         function replayMatch() {
-            document.getElementById('gameover-modal').style.display = 'none';
+            const waitNote = document.getElementById('replay-wait-note');
             if (state.mode === 'solo' || state.isHost) {
+                document.getElementById('gameover-modal').style.display = 'none';
                 resetMatch();
                 showGame();
                 if (state.mode === 'multiplayer' && state.isHost) {
-                    sendData({ type: 'snap', snap: snapshot() });
+                    sendData({ type: 'snap', snap: snapshot(true) });
                 }
             } else {
                 sendData({ type: 'replay' });
+                waitNote.classList.remove('hidden');
+                waitNote.textContent = '已送出再玩一局請求，等待房主同步新棋盤...';
                 setToast('已向房主送出再玩一局請求...', true);
             }
         }
 
+        // 依 isHost 正確對應 host 與 guest 的統計資料，避免雙人結算左右顛倒
         function openGameOver(isNew = false) {
+            const reasonEl = document.getElementById('end-reason');
+            reasonEl.textContent = state.endReason ? `結束原因：${state.endReason}` : '';
+
             document.getElementById('final-score').textContent = `最終得分：${state.score} 分`;
             document.getElementById('record-flag').classList.toggle('hidden', !isNew);
-            document.getElementById('final-stats').textContent = state.mode === 'multiplayer'
-                ? `${profile.name} 放 ${state.stats.local.cells} 格 / 消 ${state.stats.local.lines} 排；${state.mate.name} 放 ${state.stats.remote.cells} 格 / 消 ${state.stats.remote.lines} 排。`
-                : `累計放置 ${state.stats.local.cells} 格，成功消除 ${state.stats.local.lines} 排。`;
+
+            if (state.mode === 'multiplayer') {
+                const hostName = state.isHost ? profile.name : state.mate.name;
+                const guestName = !state.isHost ? profile.name : state.mate.name;
+                const hostStat = state.isHost ? state.stats.local : state.stats.remote;
+                const guestStat = !state.isHost ? state.stats.local : state.stats.remote;
+
+                document.getElementById('final-stats').textContent =
+                    `🏠 ${hostName} 放 ${hostStat.cells} 格 / 消 ${hostStat.lines} 排；👤 ${guestName} 放 ${guestStat.cells} 格 / 消 ${guestStat.lines} 排。`;
+            } else {
+                document.getElementById('final-stats').textContent =
+                    `累計放置 ${state.stats.local.cells} 格，成功消除 ${state.stats.local.lines} 排。`;
+            }
             document.getElementById('gameover-modal').style.display = 'flex';
         }
 
@@ -1866,6 +2168,7 @@
                     slot.appendChild(mini);
 
                     slot.addEventListener('click', () => {
+                        if (!state.playing || state.over) return;
                         state.armedTool = null;
                         state.pickedSlot = state.pickedSlot === idx ? null : idx;
                         renderItems();
@@ -1886,14 +2189,14 @@
                     }, { passive: false });
 
                     slot.addEventListener('touchmove', e => {
-                        if (state.pickedSlot !== idx) return;
+                        if (!state.playing || state.over || state.pickedSlot !== idx) return;
                         e.preventDefault();
                         const t = e.touches[0];
                         updateTouchGhostAndAim(p, t.clientX, t.clientY);
                     }, { passive: false });
 
                     slot.addEventListener('touchend', e => {
-                        if (state.pickedSlot !== idx) return;
+                        if (!state.playing || state.over || state.pickedSlot !== idx) return;
                         e.preventDefault();
                         hideGhost();
                         if (state.hoverPos) {
@@ -1972,7 +2275,7 @@
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'mini-item-btn' + (armed ? ' armed' : '');
-                btn.disabled = cnt <= 0;
+                btn.disabled = cnt <= 0 || !state.playing || state.over;
                 btn.title = meta.name;
                 btn.innerHTML = `<span>${meta.icon}</span><span>×${cnt}</span>`;
                 btn.addEventListener('click', () => clickTool(key));
