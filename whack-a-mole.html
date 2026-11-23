@@ -15,6 +15,7 @@
             --hole-shadow: rgba(0, 0, 0, 0.14);
             --card-bg: #FFFFFF;
             --border-color: #E0E0E0;
+            --stat-bg: #FAF3E3;
         }
 
         body.dark-mode {
@@ -26,6 +27,7 @@
             --hole-shadow: rgba(0, 0, 0, 0.45);
             --card-bg: #252830;
             --border-color: #3A3F4B;
+            --stat-bg: #2E333D;
             background-color: var(--bg-color);
             color: var(--text-color);
         }
@@ -74,9 +76,9 @@
             max-width: 480px;
             margin: 0 auto;
             padding: 0 12px;
+            position: relative;
         }
 
-        /* 狀態列：等級與生命值 */
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -112,7 +114,6 @@
             font-weight: 500;
         }
 
-        /* 固定網格尺寸，避免任何內容變化造成格子左右縮放 */
         .grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -141,7 +142,6 @@
             background: var(--hole-active);
         }
 
-        /* 角色容器固定佔位，只透過 scale 彈出，絕不擠壓格子 */
         .mole-sprite {
             font-size: 3.3rem;
             line-height: 1;
@@ -163,7 +163,6 @@
             transform: scale(0.75);
         }
 
-        /* 打兩下地鼠的醒目標示 */
         .hit-badge {
             position: absolute;
             top: 8px;
@@ -185,7 +184,6 @@
             background: #FB8C00;
         }
 
-        /* 浮動得分/扣血文字 */
         .float-tip {
             position: absolute;
             bottom: 8px;
@@ -196,7 +194,7 @@
             padding: 2px 8px;
             border-radius: 10px;
             pointer-events: none;
-            animation: floatUp 0.55s ease-out forwards;
+            animation: floatUp 0.65s ease-out forwards;
             white-space: nowrap;
             z-index: 3;
         }
@@ -206,7 +204,6 @@
             100% { opacity: 0; transform: translate(-50%, -22px); }
         }
 
-        /* 扣生命時的畫面震動與紅光提醒 */
         @keyframes damageFlash {
             0%, 100% { box-shadow: inset 0 0 0 0 rgba(231, 76, 60, 0); }
             30% { box-shadow: inset 0 0 0 8px rgba(231, 76, 60, 0.65); }
@@ -228,6 +225,128 @@
             border: 1px solid var(--border-color);
             padding: 8px 12px;
             border-radius: 12px;
+        }
+
+        /* 結算畫面遮罩與卡片 */
+        .summary-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.58);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .summary-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            border-radius: 22px;
+            width: 100%;
+            max-width: 390px;
+            padding: 22px 18px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+            transform: scale(0.92);
+            transition: transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.2);
+        }
+
+        .summary-overlay.show .summary-card {
+            transform: scale(1);
+        }
+
+        .summary-title {
+            font-size: 1.45rem;
+            font-weight: 800;
+            margin: 0 0 4px;
+        }
+
+        .summary-score-box {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #FF8F00;
+            margin: 4px 0 14px;
+        }
+
+        .summary-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 12px 0 16px;
+        }
+
+        .summary-row {
+            background: var(--stat-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-row-label {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--subtext-color);
+            white-space: nowrap;
+        }
+
+        .summary-row-items {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+
+        .icon-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .icon-count .num {
+            font-size: 1.1rem;
+        }
+
+        .num.good { color: #2E7D32; }
+        .num.miss { color: #E65100; }
+        .num.bad  { color: #C62828; }
+
+        body.dark-mode .num.good { color: #66BB6A; }
+        body.dark-mode .num.miss { color: #FFA726; }
+        body.dark-mode .num.bad  { color: #EF5350; }
+
+        .summary-detail {
+            font-size: 0.9rem;
+            color: var(--subtext-color);
+            margin-bottom: 14px;
+        }
+
+        .btn-restart {
+            width: 100%;
+            font-size: 1.15rem;
+            padding: 12px 20px;
+            border-radius: 14px;
+            cursor: pointer;
+        }
+
+        .btn-restart:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -273,27 +392,75 @@
         </div>
     </div>
 
+    <!-- 結算視窗 -->
+    <div class="summary-overlay" id="summary-overlay" role="dialog" aria-modal="true" aria-labelledby="summary-title">
+        <div class="summary-card" onclick="event.stopPropagation()">
+            <h3 class="summary-title" id="summary-title">本局結算</h3>
+            <div class="summary-score-box"><span id="sum-score">0</span> 分 <span id="sum-record" style="font-size: 1rem;"></span></div>
+
+            <div class="summary-rows">
+                <!-- 擊中地鼠：兩種地鼠頭圖示 + 數量 -->
+                <div class="summary-row">
+                    <span class="summary-row-label">擊中地鼠</span>
+                    <div class="summary-row-items">
+                        <span class="icon-count">🐹<span class="num good" id="sum-hit-normal">×0</span></span>
+                        <span class="icon-count">🐻‍❄️<span class="num good" id="sum-hit-armored">×0</span></span>
+                    </div>
+                </div>
+
+                <!-- 漏掉地鼠：地鼠頭圖示 + 數量 -->
+                <div class="summary-row">
+                    <span class="summary-row-label">漏掉地鼠</span>
+                    <div class="summary-row-items">
+                        <span class="icon-count">🐹<span class="num miss" id="sum-miss">×0</span></span>
+                    </div>
+                </div>
+
+                <!-- 誤打警察：警察圖示 + 數量 -->
+                <div class="summary-row">
+                    <span class="summary-row-label">誤打警察</span>
+                    <div class="summary-row-items">
+                        <span class="icon-count">👮‍♂️<span class="num bad" id="sum-police">×0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-detail" id="sum-detail"></div>
+
+            <button class="btn-big btn-restart" id="btn-restart" onclick="startGame()" disabled>再玩一次 ▶</button>
+        </div>
+    </div>
+
     <script src="common.js"></script>
     <script>
         let score = 0;
         let lives = 3;
         let level = 1;
         let isStarted = false;
+        let isEnding = false;
         let spawnTimer = null;
+        let summaryTimer = null;
+        let restartEnableTimer = null;
 
-        // 每個洞口的獨立狀態管理
+        let stats = {
+            normalHit: 0,
+            armoredHit: 0,
+            missedMoles: 0,
+            policeHit: 0
+        };
+
         const holes = Array.from(document.querySelectorAll('.hole')).map((el, idx) => ({
             index: idx,
             el: el,
             spriteEl: el.querySelector('.mole-sprite'),
             badgeEl: el.querySelector('.hit-badge'),
             active: false,
-            type: null,      // 'normal' | 'armored' | 'police'
+            type: null,
             hp: 0,
             hideTimeout: null
         }));
 
-        // --- 深色模式切換（與全站 localStorage 同步）---
+        // --- 深色模式切換 ---
         function initTheme() {
             const savedTheme = localStorage.getItem('theme') || localStorage.getItem('darkMode');
             if (savedTheme === 'dark' || savedTheme === 'true') {
@@ -318,25 +485,36 @@
         initTheme();
 
         // --- 等級與節奏參數計算 ---
-        // 每 10 分升一級，最高 Lv.6
         function getLevelConfig(lvl) {
             const configs = [
-                { maxConcurrent: 1, spawnInterval: 950,  stayDuration: 1550, armoredChance: 0.00, policeChance: 0.18 }, // Lv.1
-                { maxConcurrent: 2, spawnInterval: 820,  stayDuration: 1450, armoredChance: 0.20, policeChance: 0.22 }, // Lv.2
-                { maxConcurrent: 3, spawnInterval: 700,  stayDuration: 1350, armoredChance: 0.28, policeChance: 0.24 }, // Lv.3
-                { maxConcurrent: 3, spawnInterval: 600,  stayDuration: 1250, armoredChance: 0.35, policeChance: 0.26 }, // Lv.4
-                { maxConcurrent: 4, spawnInterval: 520,  stayDuration: 1150, armoredChance: 0.40, policeChance: 0.28 }, // Lv.5
-                { maxConcurrent: 5, spawnInterval: 450,  stayDuration: 1050, armoredChance: 0.45, policeChance: 0.30 }  // Lv.6+
+                { maxConcurrent: 1, spawnInterval: 950,  stayDuration: 1550, armoredChance: 0.00, policeChance: 0.18 },
+                { maxConcurrent: 2, spawnInterval: 820,  stayDuration: 1450, armoredChance: 0.20, policeChance: 0.22 },
+                { maxConcurrent: 3, spawnInterval: 700,  stayDuration: 1350, armoredChance: 0.28, policeChance: 0.24 },
+                { maxConcurrent: 3, spawnInterval: 600,  stayDuration: 1250, armoredChance: 0.35, policeChance: 0.26 },
+                { maxConcurrent: 4, spawnInterval: 520,  stayDuration: 1150, armoredChance: 0.40, policeChance: 0.28 },
+                { maxConcurrent: 5, spawnInterval: 450,  stayDuration: 1050, armoredChance: 0.45, policeChance: 0.30 }
             ];
             return configs[Math.min(lvl - 1, configs.length - 1)];
         }
 
         function startGame() {
+            clearTimeout(spawnTimer);
+            clearTimeout(summaryTimer);
+            clearTimeout(restartEnableTimer);
+
             score = 0;
             lives = 3;
             level = 1;
             isStarted = true;
+            isEnding = false;
+            stats = {
+                normalHit: 0,
+                armoredHit: 0,
+                missedMoles: 0,
+                policeHit: 0
+            };
 
+            hideSummaryModal();
             clearAllHoles();
             updateUI();
 
@@ -347,24 +525,22 @@
         }
 
         function scheduleNextSpawn(delay) {
-            if (!isStarted) return;
+            if (!isStarted || isEnding) return;
             clearTimeout(spawnTimer);
             spawnTimer = setTimeout(() => {
-                if (!isStarted) return;
+                if (!isStarted || isEnding) return;
                 spawnMole();
                 const cfg = getLevelConfig(level);
-                // 加入微幅隨機起伏，避免節奏過於機械化
                 const jitter = (Math.random() * 140) - 70;
                 scheduleNextSpawn(Math.max(320, cfg.spawnInterval + jitter));
             }, delay);
         }
 
         function spawnMole() {
-            if (!isStarted) return;
+            if (!isStarted || isEnding) return;
             const cfg = getLevelConfig(level);
             const activeCount = holes.filter(h => h.active).length;
 
-            // 若目前場上同時出現的數量已達該等級上限，等待下一拍
             if (activeCount >= cfg.maxConcurrent) return;
 
             const emptyHoles = holes.filter(h => !h.active);
@@ -395,7 +571,6 @@
                 target.badgeEl.style.display = 'none';
             }
 
-            // 需要打兩下的地鼠多給 350ms 反應時間，避免高難度下無解
             const stayTime = target.type === 'armored' ? cfg.stayDuration + 350 : cfg.stayDuration;
 
             target.hideTimeout = setTimeout(() => {
@@ -403,28 +578,28 @@
             }, stayTime);
         }
 
-        // 地鼠時間到自然縮回
         function onMoleExpire(hole) {
-            if (!hole.active || !isStarted) return;
+            if (!hole.active || !isStarted || isEnding) return;
             const missedMole = (hole.type === 'normal' || hole.type === 'armored');
             resetHole(hole);
 
             if (missedMole) {
+                stats.missedMoles++;
                 showFloatTip(hole.el, '漏掉了！-1❤️', '#E74C3C');
                 loseLife('漏掉地鼠了！扣 1 顆愛心', false);
             }
         }
 
         function hit(index) {
-            if (!isStarted) return;
+            if (!isStarted || isEnding) return;
             const hole = holes[index];
             if (!hole.active) return;
 
-            // 點擊瞬間回饋動畫
             hole.el.classList.add('hit-anim');
             setTimeout(() => hole.el.classList.remove('hit-anim'), 90);
 
             if (hole.type === 'police') {
+                stats.policeHit++;
                 clearTimeout(hole.hideTimeout);
                 resetHole(hole);
                 if (typeof playSound === 'function') playSound('bad');
@@ -434,7 +609,6 @@
             }
 
             if (hole.type === 'armored' && hole.hp > 1) {
-                // 第一下敲擊：破防並更新標示為還差 1 下
                 hole.hp = 1;
                 hole.spriteEl.innerText = '😵';
                 hole.badgeEl.innerText = '剩1下!';
@@ -442,15 +616,20 @@
                 if (typeof playSound === 'function') playSound('good');
                 showFloatTip(hole.el, '再敲一下！', '#FF9800');
 
-                // 重設縮回計時，讓玩家有充裕時間補第二下
                 clearTimeout(hole.hideTimeout);
                 const cfg = getLevelConfig(level);
                 hole.hideTimeout = setTimeout(() => onMoleExpire(hole), Math.max(850, cfg.stayDuration * 0.75));
                 return;
             }
 
-            // 成功擊倒地鼠
-            const gained = (hole.type === 'armored') ? 3 : 1;
+            const isArmored = (hole.type === 'armored');
+            const gained = isArmored ? 3 : 1;
+            if (isArmored) {
+                stats.armoredHit++;
+            } else {
+                stats.normalHit++;
+            }
+
             clearTimeout(hole.hideTimeout);
             resetHole(hole);
 
@@ -458,18 +637,16 @@
             if (typeof playSound === 'function') playSound('good');
             showFloatTip(hole.el, `+${gained}`, '#2ECC71');
 
-            // 檢查是否升級（每 10 分升 1 級）
             const newLevel = Math.min(6, Math.floor(score / 10) + 1);
             if (newLevel > level) {
                 level = newLevel;
                 document.getElementById('msg').innerText = `🔥 升級到 Lv.${level}！地鼠變多了！`;
             } else {
-                document.getElementById('msg').innerText = gained === 3 ? '擊倒重裝地鼠！(+3分)' : '打中地鼠！(+1分)';
+                document.getElementById('msg').innerText = isArmored ? '擊倒重裝地鼠！(+3分)' : '打中地鼠！(+1分)';
             }
 
             updateUI();
 
-            // 若場上已經沒有任何地鼠，立刻補一隻出來，維持流暢不中斷的手感
             const remainingActive = holes.filter(h => h.active).length;
             if (remainingActive === 0) {
                 scheduleNextSpawn(160);
@@ -481,19 +658,64 @@
             updateUI();
             document.getElementById('msg').innerText = reasonText;
 
-            // 畫面紅光閃爍
             document.body.classList.remove('damage-effect');
-            void document.body.offsetWidth; // 觸發重繪以重播動畫
+            void document.body.offsetWidth;
             document.body.classList.add('damage-effect');
 
-            // 手機震動反饋（支援 Android Chrome / 支援 Vibration API 的瀏覽器）
             if (navigator.vibrate) {
                 navigator.vibrate(isPoliceHit ? [110, 60, 110] : [140]);
             }
 
             if (lives <= 0) {
-                endGame();
+                beginEndSequence();
             }
+        }
+
+        function beginEndSequence() {
+            isEnding = true;
+            isStarted = false;
+            clearTimeout(spawnTimer);
+
+            holes.forEach(h => {
+                clearTimeout(h.hideTimeout);
+            });
+
+            document.getElementById('msg').innerText = '💥 生命值歸零！正在統計本局成績...';
+
+            summaryTimer = setTimeout(() => {
+                showSummaryModal();
+            }, 1000);
+        }
+
+        function showSummaryModal() {
+            clearAllHoles();
+
+            const isNewBest = (typeof saveHighScore === 'function') ? saveHighScore('mole', score) : false;
+
+            document.getElementById('sum-score').innerText = score;
+            document.getElementById('sum-record').innerText = isNewBest ? '🎉 新紀錄！' : '';
+
+            document.getElementById('sum-hit-normal').innerText = `×${stats.normalHit}`;
+            document.getElementById('sum-hit-armored').innerText = `×${stats.armoredHit}`;
+            document.getElementById('sum-miss').innerText = `×${stats.missedMoles}`;
+            document.getElementById('sum-police').innerText = `×${stats.policeHit}`;
+
+            document.getElementById('sum-detail').innerHTML = `最高到達 <b>Lv.${level}</b>`;
+
+            const restartBtn = document.getElementById('btn-restart');
+            restartBtn.disabled = true;
+
+            const overlay = document.getElementById('summary-overlay');
+            overlay.classList.add('show');
+
+            restartEnableTimer = setTimeout(() => {
+                restartBtn.disabled = false;
+            }, 450);
+        }
+
+        function hideSummaryModal() {
+            const overlay = document.getElementById('summary-overlay');
+            overlay.classList.remove('show');
         }
 
         function resetHole(hole) {
@@ -502,7 +724,6 @@
             hole.hp = 0;
             hole.el.classList.remove('active');
             hole.badgeEl.style.display = 'none';
-            // 延遲清空文字，讓縮回動畫順暢完成，且不影響格子尺寸
             setTimeout(() => {
                 if (!hole.active) {
                     hole.spriteEl.innerText = '';
@@ -529,7 +750,7 @@
             tip.style.color = color;
             tip.style.background = 'rgba(0,0,0,0.65)';
             parentEl.appendChild(tip);
-            setTimeout(() => tip.remove(), 550);
+            setTimeout(() => tip.remove(), 650);
         }
 
         function updateUI() {
@@ -538,16 +759,6 @@
             const fullHearts = '❤️'.repeat(lives);
             const emptyHearts = '🖤'.repeat(3 - lives);
             document.getElementById('lives-display').innerText = fullHearts + emptyHearts;
-        }
-
-        function endGame() {
-            isStarted = false;
-            clearTimeout(spawnTimer);
-            clearAllHoles();
-
-            let isNewBest = (typeof saveHighScore === 'function') ? saveHighScore('mole', score) : false;
-            document.getElementById('msg').innerHTML = `生命值歸零！最終等級 <b>Lv.${level}</b>，總得分：<b>${score}</b> 分 ${isNewBest ? '🎉 創新紀錄！' : ''}`;
-            document.getElementById('config-box').style.display = 'block';
         }
     </script>
 </body>
