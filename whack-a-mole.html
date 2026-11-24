@@ -46,7 +46,6 @@
             transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.3s ease;
         }
 
-        /* 熱血狀態全畫面外框光暈 */
         body.fever-active {
             box-shadow: inset 0 0 28px rgba(255, 111, 0, 0.55);
         }
@@ -90,7 +89,6 @@
             position: relative;
         }
 
-        /* 狀態列：等級、連擊、生命值 */
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -138,7 +136,6 @@
             font-size: 1.2rem;
         }
 
-        /* 熱血狀態計量條與倒數區 */
         .fever-bar-wrap {
             background: var(--card-bg);
             border: 2px solid var(--border-color);
@@ -192,7 +189,6 @@
             transition: width 0.08s linear;
         }
 
-        /* 進入熱血狀態的醒目橫幅提示 */
         .fever-banner {
             position: fixed;
             top: 18%;
@@ -357,7 +353,6 @@
             border-radius: 12px;
         }
 
-        /* 結算畫面遮罩與卡片 */
         .summary-overlay {
             position: fixed;
             inset: 0;
@@ -491,7 +486,6 @@
         </div>
     </div>
 
-    <!-- 熱血進入橫幅 -->
     <div class="fever-banner" id="fever-banner">
         🔥 熱血狀態啟動！
         <small>得分 ×2 · 鐵頭地鼠一擊必殺！</small>
@@ -506,7 +500,6 @@
             <div class="lives-box" id="lives-display" aria-label="剩餘生命值">❤️❤️❤️</div>
         </div>
 
-        <!-- 熱血集氣與倒數條 -->
         <div class="fever-bar-wrap" id="fever-bar-wrap">
             <div class="fever-header">
                 <span id="fever-label">⚡ 熱血集氣：0 / 8</span>
@@ -561,7 +554,8 @@
                 <div class="summary-row">
                     <span class="summary-row-label">漏掉地鼠</span>
                     <div class="summary-row-items">
-                        <span class="icon-count">🐹<span class="num miss" id="sum-miss">×0</span></span>
+                        <span class="icon-count">🐹<span class="num miss" id="sum-miss-normal">×0</span></span>
+                        <span class="icon-count">🐻‍❄️<span class="num miss" id="sum-miss-armored">×0</span></span>
                     </div>
                 </div>
 
@@ -581,7 +575,6 @@
 
     <script src="common.js"></script>
     <script>
-        // --- 防止 iPhone Safari 雙擊縮放的多層保護 ---
         let lastTouchEndTime = 0;
         document.addEventListener('touchend', function (e) {
             const now = Date.now();
@@ -595,10 +588,9 @@
             e.preventDefault();
         }, { passive: false });
 
-        // --- 遊戲狀態變數 ---
         const MAX_LIVES = 3;
-        const FEVER_TARGET = 8;       // 連續打中 8 隻進入熱血狀態
-        const FEVER_DURATION = 6000;  // 熱血持續 6 秒
+        const FEVER_TARGET = 8;
+        const FEVER_DURATION = 6000;
 
         let score = 0;
         let lives = MAX_LIVES;
@@ -606,10 +598,9 @@
         let isStarted = false;
         let isEnding = false;
 
-        // 雙軌連擊系統
-        let totalCombo = 0;     // 持續累積的總連擊（失誤才歸零）
-        let maxCombo = 0;       // 本局最高連擊紀錄
-        let feverCharge = 0;    // 計算熱血進度的連擊（滿 8 啟動）
+        let totalCombo = 0;
+        let maxCombo = 0;
+        let feverCharge = 0;
         let isFever = false;
         let feverEndTime = 0;
         let feverTickTimer = null;
@@ -622,7 +613,8 @@
         let stats = {
             normalHit: 0,
             armoredHit: 0,
-            missedMoles: 0,
+            missedNormal: 0,
+            missedArmored: 0,
             policeHit: 0,
             feverCount: 0
         };
@@ -633,12 +625,11 @@
             spriteEl: el.querySelector('.mole-sprite'),
             badgeEl: el.querySelector('.hit-badge'),
             active: false,
-            type: null,      // 'normal' | 'armored' | 'police' | 'heart'
+            type: null,
             hp: 0,
             hideTimeout: null
         }));
 
-        // --- 深色模式切換 ---
         function initTheme() {
             const savedTheme = localStorage.getItem('theme') || localStorage.getItem('darkMode');
             if (savedTheme === 'dark' || savedTheme === 'true') {
@@ -662,7 +653,6 @@
 
         initTheme();
 
-        // --- 等級與節奏參數計算 ---
         function getLevelConfig(lvl) {
             const configs = [
                 { maxConcurrent: 1, spawnInterval: 950,  stayDuration: 1550, armoredChance: 0.00, policeChance: 0.18 },
@@ -698,7 +688,8 @@
             stats = {
                 normalHit: 0,
                 armoredHit: 0,
-                missedMoles: 0,
+                missedNormal: 0,
+                missedArmored: 0,
                 policeHit: 0,
                 feverCount: 0
             };
@@ -720,7 +711,6 @@
                 if (!isStarted || isEnding) return;
                 spawnMole();
                 const cfg = getLevelConfig(level);
-                // 熱血狀態下出怪節奏再微幅加快 12%，手感更爽快
                 const baseInterval = isFever ? cfg.spawnInterval * 0.88 : cfg.spawnInterval;
                 const jitter = (Math.random() * 140) - 70;
                 scheduleNextSpawn(Math.max(300, baseInterval + jitter));
@@ -740,7 +730,6 @@
             const target = emptyHoles[Math.floor(Math.random() * emptyHoles.length)];
             const roll = Math.random();
 
-            // 只有生命值未滿 (< 3) 且場上沒有其他補血愛心時，才有 7% 低機率出現補血道具
             const hasActiveHeart = holes.some(h => h.active && h.type === 'heart');
             const heartChance = (lives < MAX_LIVES && !hasActiveHeart) ? 0.07 : 0;
 
@@ -762,7 +751,6 @@
                 target.badgeEl.style.display = 'none';
             } else if (roll < heartChance + cfg.policeChance + cfg.armoredChance) {
                 target.type = 'armored';
-                // 熱血狀態下鐵頭地鼠一擊必殺
                 target.hp = isFever ? 1 : 2;
                 target.spriteEl.innerText = '🐻‍❄️';
                 target.badgeEl.innerText = isFever ? '一擊!' : '打2下';
@@ -787,14 +775,17 @@
 
         function onMoleExpire(hole) {
             if (!hole.active || !isStarted || isEnding) return;
-            const missedMole = (hole.type === 'normal' || hole.type === 'armored');
+            const expiredType = hole.type;
             resetHole(hole);
 
-            // 補血愛心或警察時間到自然消失不會扣血
-            if (missedMole) {
-                stats.missedMoles++;
-                showFloatTip(hole.el, '漏掉了！-1❤️', '#E74C3C');
-                loseLife('漏掉地鼠了！扣 1 顆愛心', false);
+            if (expiredType === 'normal') {
+                stats.missedNormal++;
+                showFloatTip(hole.el, '漏掉🐹 -1❤️', '#E74C3C');
+                loseLife('漏掉普通地鼠了！扣 1 顆愛心', false);
+            } else if (expiredType === 'armored') {
+                stats.missedArmored++;
+                showFloatTip(hole.el, '漏掉🐻‍❄️ -1❤️', '#E74C3C');
+                loseLife('漏掉鐵頭地鼠了！扣 1 顆愛心', false);
             }
         }
 
@@ -807,7 +798,6 @@
             hole.el.classList.add('hit-anim');
             setTimeout(() => hole.el.classList.remove('hit-anim'), 90);
 
-            // 1. 誤擊警察
             if (hole.type === 'police') {
                 stats.policeHit++;
                 clearTimeout(hole.hideTimeout);
@@ -818,7 +808,6 @@
                 return;
             }
 
-            // 2. 打中補血愛心
             if (hole.type === 'heart') {
                 clearTimeout(hole.hideTimeout);
                 resetHole(hole);
@@ -836,7 +825,6 @@
                 return;
             }
 
-            // 3. 鐵頭地鼠第一下破防（非熱血狀態下）
             if (hole.type === 'armored' && hole.hp > 1) {
                 hole.hp = 1;
                 hole.spriteEl.innerText = '😵';
@@ -851,7 +839,6 @@
                 return;
             }
 
-            // 4. 成功擊倒地鼠
             const isArmored = (hole.type === 'armored');
             if (isArmored) {
                 stats.armoredHit++;
@@ -862,7 +849,6 @@
             clearTimeout(hole.hideTimeout);
             resetHole(hole);
 
-            // 更新雙軌連擊
             totalCombo++;
             if (totalCombo > maxCombo) maxCombo = totalCombo;
 
@@ -871,7 +857,6 @@
             void comboEl.offsetWidth;
             comboEl.classList.add('bump');
 
-            // 計算得分（熱血狀態分數 ×2，且每 5 連擊額外 +1 連擊獎分）
             const basePoints = isArmored ? 3 : 1;
             const feverMultiplier = isFever ? 2 : 1;
             const comboBonus = (totalCombo % 5 === 0) ? 1 : 0;
@@ -883,7 +868,6 @@
             const tipText = comboBonus > 0 ? `+${gained} (連擊獎勵!)` : `+${gained}`;
             showFloatTip(hole.el, tipText, isFever ? '#FFD600' : '#2ECC71');
 
-            // 若目前尚未進入熱血狀態，累積熱血連擊計量條
             if (!isFever) {
                 feverCharge++;
                 if (feverCharge >= FEVER_TARGET) {
@@ -891,7 +875,6 @@
                 }
             }
 
-            // 檢查分數等級提升
             const newLevel = Math.min(6, Math.floor(score / 10) + 1);
             if (newLevel > level) {
                 level = newLevel;
@@ -915,7 +898,6 @@
             }
         }
 
-        // --- 熱血狀態控制 ---
         function activateFever() {
             isFever = true;
             feverCharge = FEVER_TARGET;
@@ -924,7 +906,6 @@
 
             document.body.classList.add('fever-active');
 
-            // 場上現有的鐵頭地鼠立刻變成一擊必殺
             holes.forEach(h => {
                 if (h.active && h.type === 'armored') {
                     h.hp = 1;
@@ -933,7 +914,6 @@
                 }
             });
 
-            // 顯示明顯的熱血進場橫幅
             const banner = document.getElementById('fever-banner');
             banner.classList.add('show');
             clearTimeout(feverBannerTimer);
@@ -998,7 +978,6 @@
         }
 
         function loseLife(reasonText, isPoliceHit) {
-            // 失誤時：總連擊歸零、熱血集氣歸零並中斷熱血狀態
             totalCombo = 0;
             if (isFever) {
                 endFever(true);
@@ -1051,7 +1030,8 @@
 
             document.getElementById('sum-hit-normal').innerText = `×${stats.normalHit}`;
             document.getElementById('sum-hit-armored').innerText = `×${stats.armoredHit}`;
-            document.getElementById('sum-miss').innerText = `×${stats.missedMoles}`;
+            document.getElementById('sum-miss-normal').innerText = `×${stats.missedNormal}`;
+            document.getElementById('sum-miss-armored').innerText = `×${stats.missedArmored}`;
             document.getElementById('sum-police').innerText = `×${stats.policeHit}`;
 
             document.getElementById('sum-detail').innerHTML =
