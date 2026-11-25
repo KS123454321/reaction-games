@@ -487,6 +487,34 @@
             box-sizing: border-box;
         }
 
+        .hand-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-rotate {
+            padding: 5px 10px;
+            font-size: 0.88rem;
+            font-weight: 800;
+            border-radius: 9px;
+            border: 2px solid #2563eb;
+            background: rgba(37, 99, 235, 0.12);
+            color: #2563eb;
+            cursor: pointer;
+        }
+        [data-theme="dark"] .btn-rotate {
+            color: #93c5fd;
+            border-color: #60a5fa;
+        }
+        .btn-rotate:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
         .hand-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -576,9 +604,20 @@
             border: 1px solid var(--border-line);
             border-radius: 20px;
             padding: 24px;
-            max-width: 420px;
+            max-width: 440px;
             width: 100%;
             text-align: center;
+        }
+
+        .summary-settings-box {
+            background: var(--bg-sub);
+            border: 1px solid var(--border-line);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin: 12px 0;
+            text-align: left;
+            font-size: 0.9rem;
+            line-height: 1.6;
         }
 
         .hidden {
@@ -640,6 +679,11 @@
                 </select>
             </label>
         </div>
+
+        <label class="offset-check" style="margin-bottom: 10px;">
+            <input type="checkbox" id="chk-rotate-lobby">
+            <span>🔄 允許旋轉方塊（點選方塊後可順時針旋轉 90°）</span>
+        </label>
 
         <label class="offset-check" style="margin-bottom: 12px;">
             <input type="checkbox" id="chk-offset-lobby">
@@ -724,9 +768,17 @@
 
             <div class="side-box">
                 <div>
-                    <div style="font-weight: 700; margin-bottom: 8px;">🧱 待選方塊（3 塊用完才補新一批）</div>
+                    <div class="hand-header-row">
+                        <span style="font-weight: 700;">🧱 待選方塊（3 塊用完才補新一批）</span>
+                        <button type="button" class="btn-rotate hidden" id="btn-rotate-piece" disabled>🔄 旋轉 90°</button>
+                    </div>
                     <div id="hand-el" class="hand-row"></div>
                 </div>
+
+                <label class="offset-check">
+                    <input type="checkbox" id="chk-rotate-game">
+                    <span>🔄 允許旋轉方塊（可旋轉已選方塊）</span>
+                </label>
 
                 <label class="offset-check">
                     <input type="checkbox" id="chk-offset-game">
@@ -747,6 +799,7 @@
             <p id="final-score" style="font-size: 1.45rem; font-weight: 900; margin: 10px 0;"></p>
             <p id="record-flag" class="hidden" style="color: #16a34a; font-weight: 700;">🌟 刷新最高紀錄！</p>
             <p id="final-stats" class="muted" style="font-size: 0.95rem;"></p>
+            <div id="final-settings" class="summary-settings-box"></div>
             <p id="replay-wait-note" class="muted hidden" style="font-size: 0.88rem; margin-top: 8px;"></p>
             <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
                 <button type="button" class="btn-green" id="btn-replay">🔄 再玩一局</button>
@@ -839,6 +892,7 @@
             name: 'coop_blocks_name',
             color: 'coop_blocks_color',
             offset: 'coop_blocks_offset',
+            allowRotate: 'coop_blocks_allow_rotate',
             boardSize: 'coop_blocks_board_size',
             difficulty: 'coop_blocks_difficulty',
             timeLimit: 'coop_blocks_time_limit'
@@ -868,6 +922,7 @@
             offset: localStorage.getItem(KEYS.offset) === null
                 ? true
                 : localStorage.getItem(KEYS.offset) === 'true',
+            allowRotate: localStorage.getItem(KEYS.allowRotate) === 'true',
             boardSize: ensureValidBoardSize(localStorage.getItem(KEYS.boardSize)),
             difficulty: ensureValidDifficulty(localStorage.getItem(KEYS.difficulty)),
             timeLimit: ensureValidTimeLimit(localStorage.getItem(KEYS.timeLimit))
@@ -883,6 +938,7 @@
             boardSize: profile.boardSize,
             difficulty: profile.difficulty,
             timeLimit: profile.timeLimit,
+            allowRotate: profile.allowRotate,
             remainingSec: 0,
             score: 0,
             matchId: 0,
@@ -964,6 +1020,53 @@
             document.getElementById('chk-offset-lobby').checked = profile.offset;
             document.getElementById('chk-offset-game').checked = profile.offset;
             drawPreview();
+        }
+
+        function setAllowRotate(val) {
+            const allowed = !!val;
+            profile.allowRotate = allowed;
+            state.allowRotate = allowed;
+            localStorage.setItem(KEYS.allowRotate, String(allowed));
+            document.getElementById('chk-rotate-lobby').checked = allowed;
+            document.getElementById('chk-rotate-game').checked = allowed;
+            updateRotateButtonUI();
+            updateWaitingBoardInfo();
+            if (state.playing) updateModeBadge();
+        }
+
+        // 順時針旋轉矩陣 90 度，並保留每一格上的道具資訊
+        function rotateMatrixCW(matrix) {
+            if (!Array.isArray(matrix) || !matrix.length) return matrix;
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            const rotated = Array.from({ length: cols }, () => Array(rows).fill(null));
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    rotated[c][rows - 1 - r] = matrix[r][c] ? { ...matrix[r][c] } : null;
+                }
+            }
+            return rotated;
+        }
+
+        function rotatePickedPiece() {
+            if (!state.allowRotate || !state.playing || state.over) return;
+            if (state.pickedSlot === null) return;
+            const piece = state.hands.local[state.pickedSlot];
+            if (!piece || !piece.matrix) return;
+
+            piece.matrix = rotateMatrixCW(piece.matrix);
+            safeSound('good');
+            renderHand();
+            drawPreview();
+            updateRotateButtonUI();
+        }
+
+        function updateRotateButtonUI() {
+            const btn = document.getElementById('btn-rotate-piece');
+            if (!btn) return;
+            btn.classList.toggle('hidden', !state.allowRotate);
+            const hasPicked = state.pickedSlot !== null && !!state.hands.local[state.pickedSlot];
+            btn.disabled = !state.allowRotate || !hasPicked || !state.playing || state.over;
         }
 
         function setToast(msg, flash = false) {
@@ -1135,8 +1238,9 @@
             const isMp = state.mode === 'multiplayer';
             const diffLabel = (DIFFICULTY_META[state.difficulty] || DIFFICULTY_META.medium).label;
             const timeLabel = state.timeLimit ? `${Math.floor(state.timeLimit / 60)}分限時` : '不限時';
+            const rotLabel = state.allowRotate ? '可旋轉' : '不可旋轉';
             document.getElementById('mode-badge').textContent =
-                `${isMp ? '🤝 雙人合作' : '👤 單人模式'}（${state.boardSize}×${state.boardSize}・${diffLabel}・${timeLabel}）`;
+                `${isMp ? '🤝 雙人合作' : '👤 單人模式'}（${state.boardSize}×${state.boardSize}・${diffLabel}・${timeLabel}・${rotLabel}）`;
         }
 
         function syncLobbySettingsFromUI() {
@@ -1199,6 +1303,12 @@
                 swatchBox.appendChild(btn);
             });
 
+            document.getElementById('chk-rotate-lobby').checked = profile.allowRotate;
+            document.getElementById('chk-rotate-game').checked = profile.allowRotate;
+            document.getElementById('chk-rotate-lobby').addEventListener('change', e => setAllowRotate(e.target.checked));
+            document.getElementById('chk-rotate-game').addEventListener('change', e => setAllowRotate(e.target.checked));
+            document.getElementById('btn-rotate-piece').addEventListener('click', rotatePickedPiece);
+
             document.getElementById('chk-offset-lobby').checked = profile.offset;
             document.getElementById('chk-offset-game').checked = profile.offset;
             document.getElementById('chk-offset-lobby').addEventListener('change', e => setOffset(e.target.checked));
@@ -1252,9 +1362,10 @@
         function updateWaitingBoardInfo() {
             const el = document.getElementById('waiting-board-info');
             if (!el) return;
-            const diffLabel = (DIFFICULTY_META[state.difficulty] || DIFFICULTY_META.medium).label;
-            const timeLabel = state.timeLimit ? `${Math.floor(state.timeLimit / 60)} 分鐘` : '不限時訓練';
-            el.textContent = `棋盤尺寸：${state.boardSize} × ${state.boardSize}｜難度：${diffLabel}｜時間：${timeLabel}`;
+            const diffLabel = (DIFFICULTY_META[profile.difficulty] || DIFFICULTY_META.medium).label;
+            const timeLabel = profile.timeLimit ? `${Math.floor(profile.timeLimit / 60)} 分鐘` : '不限時訓練';
+            const rotLabel = profile.allowRotate ? '允許旋轉' : '不可旋轉';
+            el.textContent = `棋盤尺寸：${profile.boardSize} × ${profile.boardSize}｜難度：${diffLabel}｜時間：${timeLabel}｜方塊：${rotLabel}`;
         }
 
         function publicProfile() {
@@ -1271,6 +1382,7 @@
             state.boardSize = profile.boardSize;
             state.difficulty = profile.difficulty;
             state.timeLimit = profile.timeLimit;
+            state.allowRotate = profile.allowRotate;
             resetMatch();
             showGame();
         }
@@ -1297,6 +1409,7 @@
                 state.boardSize = profile.boardSize;
                 state.difficulty = profile.difficulty;
                 state.timeLimit = profile.timeLimit;
+                state.allowRotate = profile.allowRotate;
             }
             roomCode = reuseCode || makeCode(5);
 
@@ -1459,6 +1572,8 @@
             document.getElementById('game-view').classList.remove('hidden');
             document.getElementById('btn-lobby-back').classList.remove('hidden');
 
+            document.getElementById('chk-rotate-game').checked = !!state.allowRotate;
+            updateRotateButtonUI();
             applyBoardCellSize();
             updateModeBadge();
             renderTimerUI();
@@ -1700,10 +1815,15 @@
         function canPiecePlaceAnywhere(piece) {
             if (!piece || !piece.matrix) return false;
             const n = state.boardSize;
-            for (let r = 0; r < n; r++) {
-                for (let c = 0; c < n; c++) {
-                    if (canFit(piece.matrix, r, c)) return true;
+            let mat = piece.matrix;
+            const turns = state.allowRotate ? 4 : 1;
+            for (let t = 0; t < turns; t++) {
+                for (let r = 0; r < n; r++) {
+                    for (let c = 0; c < n; c++) {
+                        if (canFit(mat, r, c)) return true;
+                    }
                 }
+                mat = rotateMatrixCW(mat);
             }
             return false;
         }
@@ -2004,7 +2124,7 @@
             }
         }
 
-        // 依 isHost 正確對應 host 與 guest 的統計資料，避免雙人結算左右顛倒
+        // 依 isHost 正確對應 host 與 guest 的統計資料，並顯示當局完整設定
         function openGameOver(isNew = false) {
             const reasonEl = document.getElementById('end-reason');
             reasonEl.textContent = state.endReason ? `結束原因：${state.endReason}` : '';
@@ -2024,6 +2144,21 @@
                 document.getElementById('final-stats').textContent =
                     `累計放置 ${state.stats.local.cells} 格，成功消除 ${state.stats.local.lines} 排。`;
             }
+
+            const modeText = state.mode === 'multiplayer' ? '雙人合作連線' : '單人模式';
+            const diffText = (DIFFICULTY_META[state.difficulty] || DIFFICULTY_META.medium).label;
+            const timeText = state.timeLimit ? `限時 ${Math.floor(state.timeLimit / 60)} 分鐘` : '不限時（訓練模式）';
+            const rotText = state.allowRotate ? '允許旋轉方塊' : '不允許旋轉方塊';
+
+            document.getElementById('final-settings').innerHTML = `
+                <div><strong>📋 本局設定：</strong></div>
+                <div>• 模式：${modeText}</div>
+                <div>• 棋盤大小：${state.boardSize} × ${state.boardSize}</div>
+                <div>• 遊戲難度：${diffText}</div>
+                <div>• 時間模式：${timeText}</div>
+                <div>• 方塊旋轉：${rotText}</div>
+            `;
+
             document.getElementById('gameover-modal').style.display = 'flex';
         }
 
@@ -2174,6 +2309,7 @@
                         renderItems();
                         renderHand();
                         renderBoard();
+                        updateRotateButtonUI();
                     });
 
                     slot.addEventListener('touchstart', e => {
@@ -2184,6 +2320,7 @@
                         renderItems();
                         renderHand();
                         renderBoard();
+                        updateRotateButtonUI();
                         const t = e.touches[0];
                         updateTouchGhostAndAim(p, t.clientX, t.clientY);
                     }, { passive: false });
@@ -2209,6 +2346,8 @@
 
                 box.appendChild(slot);
             });
+
+            updateRotateButtonUI();
         }
 
         function updateTouchGhostAndAim(piece, touchX, touchY) {

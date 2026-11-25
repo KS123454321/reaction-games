@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>星際清道夫 - 雙搖桿生存射擊</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入科幻與無襯線字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #070b14;
+            font-family: 'Inter', sans-serif;
+            color: #f8fafc;
+        }
+        .font-sci {
+            font-family: 'Orbitron', 'Inter', sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Fever 模式邊緣霓虹光暈動畫 */
+        @keyframes feverPulse {
+            0%, 100% {
+                box-shadow: inset 0 0 45px rgba(236, 72, 153, 0.55), inset 0 0 90px rgba(245, 158, 11, 0.35);
+            }
+            50% {
+                box-shadow: inset 0 0 75px rgba(236, 72, 153, 0.85), inset 0 0 130px rgba(56, 189, 248, 0.5);
+            }
+        }
+        .fever-vignette {
+            animation: feverPulse 0.8s infinite ease-in-out;
+            pointer-events: none;
+        }
+        /* 按鈕立體光澤與按壓效果 */
+        .game-btn {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+        }
+        .game-btn:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 0 28px rgba(6, 182, 212, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+        }
+        .game-btn:active {
+            transform: scale(0.95);
+        }
+        .secondary-btn {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.12s ease;
+        }
+        .secondary-btn:hover {
+            background: rgba(51, 65, 85, 0.95);
+            border-color: rgba(148, 163, 184, 0.6);
+        }
+        .secondary-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="relative w-full h-full">
+
+    <!-- 遊戲主畫布 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Fever Time 全螢幕邊緣光暈 -->
+    <div id="feverOverlay" class="hidden fixed inset-0 z-10 fever-vignette"></div>
+
+    <!-- 頂部 HUD 狀態列 -->
+    <div id="hud" class="fixed top-0 left-0 right-0 z-20 p-3 sm:p-4 flex flex-col gap-2 pointer-events-none">
+        <div class="flex items-center justify-between gap-2">
+            <!-- 左上：返回首頁按鈕 & 生命值 -->
+            <div class="flex items-center gap-2 sm:gap-3 pointer-events-auto">
+                <button id="homeBtn" title="返回首頁" class="secondary-btn px-3 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 backdrop-blur-md">
+                    <span>🏠</span>
+                    <span class="hidden sm:inline">首頁</span>
+                </button>
+                <!-- 血量愛心列 -->
+                <div id="heartsContainer" class="flex items-center gap-1 bg-slate-900/75 backdrop-blur-md border border-slate-700/60 px-2.5 py-1.5 rounded-xl">
+                    <!-- JS 動態生成愛心 -->
+                </div>
+            </div>
+
+            <!-- 中上：分數與最高分 -->
+            <div class="flex flex-col items-center bg-slate-900/75 backdrop-blur-md border border-slate-700/60 px-4 py-1.5 rounded-2xl shadow-lg">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-[10px] sm:text-xs uppercase tracking-wider text-cyan-400 font-bold">SCORE</span>
+                    <span id="scoreDisplay" class="font-sci text-xl sm:text-2xl font-black text-white tracking-wide">0</span>
+                    <span id="bloodModeHudBadge" class="hidden text-[10px] font-black bg-rose-600/90 text-white px-1.5 py-0.5 rounded-md shadow">🩸血戰</span>
+                </div>
+                <div class="text-[11px] text-slate-400 flex items-center gap-2">
+                    <span>BEST: <strong id="bestScoreDisplay" class="text-amber-400 font-sci">0</strong></span>
+                    <span>•</span>
+                    <span id="waveDisplay" class="text-emerald-400 font-semibold">WAVE 1</span>
+                </div>
+            </div>
+
+            <!-- 右上：目前武器與剩餘時間 -->
+            <div class="flex items-center gap-2 bg-slate-900/75 backdrop-blur-md border border-slate-700/60 px-3 py-1.5 rounded-xl min-w-[105px] sm:min-w-[135px] justify-end">
+                <div class="text-right">
+                    <div id="weaponName" class="text-xs sm:text-sm font-bold text-cyan-300">脈衝步槍</div>
+                    <div class="w-20 sm:w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1">
+                        <div id="weaponTimerBar" class="h-full bg-cyan-400 transition-all duration-75" style="width: 100%"></div>
+                    </div>
+                </div>
+                <span id="weaponIcon" class="text-xl sm:text-2xl">🔫</span>
+            </div>
+        </div>
+
+        <!-- 正上方：Fever 超載能量條 -->
+        <div class="mx-auto w-full max-w-md flex flex-col items-center">
+            <div class="w-full h-3 bg-slate-900/85 border border-slate-700/80 rounded-full overflow-hidden p-0.5 shadow-inner relative">
+                <div id="feverBar" class="h-full rounded-full transition-all duration-100 bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400" style="width: 0%"></div>
+            </div>
+            <div id="feverLabel" class="text-[11px] font-sci font-bold tracking-widest mt-0.5 text-slate-400">
+                OVERDRIVE 充能中
+            </div>
+        </div>
+    </div>
+
+    <!-- 手機觸控提示 (僅在觸控裝置或初期顯示) -->
+    <div id="touchHint" class="fixed bottom-4 left-0 right-0 z-10 pointer-events-none flex justify-between px-6 text-[11px] text-slate-400/70 sm:hidden">
+        <span>👈 左側滑動移動</span>
+        <span>右側滑動瞄準射擊 👉</span>
+    </div>
+
+    <!-- 開始畫面視窗 -->
+    <div id="startModal" class="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+        <div class="bg-slate-900/95 border border-cyan-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-4xl shadow-lg">
+                👾
+            </div>
+            <h1 class="font-sci text-2xl sm:text-3xl font-black tracking-wider bg-gradient-to-r from-cyan-300 via-sky-400 to-fuchsia-400 bg-clip-text text-transparent mb-1">
+                星際清道夫
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400 mb-5">ALIEN EXTERMINATOR • 快節奏生存戰</p>
+
+            <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 text-left text-xs sm:text-sm text-slate-300 space-y-2.5 mb-5">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base">🕹️</span>
+                    <span><strong class="text-cyan-300">電腦：</strong>WASD / 方向鍵移動，滑鼠自動瞄準連發</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base">📱</span>
+                    <span><strong class="text-cyan-300">手機：</strong>左下虛擬搖桿走位，右下搖桿瞄準開火</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base">🔥</span>
+                    <span><strong class="text-fuchsia-400">超載模式：</strong>連續擊殺集滿能量，進入無敵狂熱散射！</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base">📦</span>
+                    <span>擊殺掉落：<strong class="text-amber-300">散彈 / 穿透雷射 / 連鎖閃電 / 追蹤飛彈</strong> 與補血護盾！</span>
+                </div>
+            </div>
+
+            <!-- 血戰模式勾選框 -->
+            <label for="bloodModeCheckbox" class="flex items-center justify-between bg-rose-950/40 hover:bg-rose-950/60 border border-rose-500/40 rounded-2xl p-3.5 mb-5 cursor-pointer transition select-none group">
+                <div class="flex items-center gap-3 text-left">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">🩸</span>
+                    <div>
+                        <div class="text-sm font-black text-rose-400 flex items-center gap-1.5">
+                            <span>血戰模式 (BLOODBATH)</span>
+                            <span class="text-[10px] bg-rose-500/20 border border-rose-400/50 text-rose-300 px-1.5 py-0.5 rounded-full">分數 x1.5</span>
+                        </div>
+                        <div class="text-[11px] text-slate-300">敵人數量暴增 3 倍！體驗極限無雙割草快感</div>
+                    </div>
+                </div>
+                <input type="checkbox" id="bloodModeCheckbox" class="w-5 h-5 accent-rose-500 rounded cursor-pointer shrink-0">
+            </label>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="startHomeBtn" class="secondary-btn py-3.5 px-5 rounded-2xl font-bold text-slate-300 text-sm sm:w-1/3">
+                    返回首頁
+                </button>
+                <button id="startBtn" class="game-btn py-3.5 px-6 rounded-2xl font-black text-slate-950 text-base sm:w-2/3 tracking-wide">
+                    立即出擊 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲結束結算視窗 -->
+    <div id="gameOverModal" class="hidden fixed inset-0 z-30 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+        <div class="bg-slate-900/95 border border-rose-500/40 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl">
+            <div class="text-4xl mb-2">💀</div>
+            <h2 class="font-sci text-2xl sm:text-3xl font-black text-rose-400 mb-1">防線失守</h2>
+            <div id="overModeTag" class="hidden text-xs font-bold text-rose-300 mb-1">🩸 血戰模式戰績</div>
+            <p id="newRecordBadge" class="hidden inline-block bg-amber-500/20 border border-amber-400 text-amber-300 text-xs font-bold px-3 py-0.5 rounded-full mb-3 animate-bounce">
+                🏆 刷新歷史最高紀錄！
+            </p>
+
+            <div class="grid grid-cols-2 gap-3 my-4">
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3">
+                    <div class="text-xs text-slate-400 mb-1">本次得分</div>
+                    <div id="finalScore" class="font-sci text-2xl font-black text-white">0</div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3">
+                    <div class="text-xs text-slate-400 mb-1">歷史最高</div>
+                    <div id="finalBestScore" class="font-sci text-2xl font-black text-amber-400">0</div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3">
+                    <div class="text-xs text-slate-400 mb-0.5">殲滅異形</div>
+                    <div id="finalKills" class="font-sci text-lg font-bold text-cyan-400">0</div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3">
+                    <div class="text-xs text-slate-400 mb-0.5">存活時間</div>
+                    <div id="finalTime" class="font-sci text-lg font-bold text-fuchsia-400">0s</div>
+                </div>
+            </div>
+
+            <!-- 結算畫面快速切換血戰模式 -->
+            <label for="overBloodModeCheckbox" class="flex items-center justify-center gap-2 bg-rose-950/35 border border-rose-500/30 rounded-xl py-2 px-3 mb-4 cursor-pointer text-xs text-rose-300 font-bold">
+                <input type="checkbox" id="overBloodModeCheckbox" class="w-4 h-4 accent-rose-500 rounded cursor-pointer">
+                <span>🩸 下一局開啟「血戰模式」（海量敵群）</span>
+            </label>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="overHomeBtn" class="secondary-btn py-3.5 px-5 rounded-2xl font-bold text-slate-300 text-sm sm:w-2/5">
+                    🏠 回到首頁
+                </button>
+                <button id="restartBtn" class="game-btn py-3.5 px-6 rounded-2xl font-black text-slate-950 text-base sm:w-3/5">
+                    再戰一局 🔄
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 返回首頁確認視窗 (取代 alert/confirm) -->
+    <div id="confirmHomeModal" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xs w-full p-6 text-center shadow-2xl">
+            <div class="text-3xl mb-2">🛸</div>
+            <h3 class="text-lg font-bold text-white mb-1">撤離戰場？</h3>
+            <p class="text-xs text-slate-400 mb-5">目前進度將會結算並返回首頁。</p>
+            <div class="flex gap-3">
+                <button id="cancelHomeBtn" class="secondary-btn flex-1 py-2.5 rounded-xl text-sm font-bold text-slate-300">
+                    繼續戰鬥
+                </button>
+                <button id="confirmHomeBtn" class="bg-rose-600 hover:bg-rose-500 flex-1 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg transition">
+                    確認返回
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ==========================================
+        // 1. 音效合成器 (Web Audio API，無外部檔案依賴)
+        // ==========================================
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playShoot(type = 'normal', isFever = false) {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'laser') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(isFever ? 980 : 760, now);
+                    osc.frequency.exponentialRampToValueAtTime(160, now + 0.14);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+                    osc.start(now);
+                    osc.stop(now + 0.14);
+                } else if (type === 'shotgun') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(240, now);
+                    osc.frequency.exponentialRampToValueAtTime(55, now + 0.16);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                } else if (type === 'tesla') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1100, now);
+                    osc.frequency.exponentialRampToValueAtTime(320, now + 0.11);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+                    osc.start(now);
+                    osc.stop(now + 0.11);
+                } else {
+                    osc.type = isFever ? 'sawtooth' : 'sine';
+                    osc.frequency.setValueAtTime(isFever ? 680 : 520, now);
+                    osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                }
+            }
+            playExplosion(big = false) {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(big ? 140 : 190, now);
+                osc.frequency.exponentialRampToValueAtTime(32, now + (big ? 0.28 : 0.14));
+                gain.gain.setValueAtTime(big ? 0.14 : 0.07, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (big ? 0.28 : 0.14));
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + (big ? 0.28 : 0.14));
+            }
+            playPickup() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(660, now + 0.06);
+                osc.frequency.setValueAtTime(880, now + 0.12);
+                gain.gain.setValueAtTime(0.09, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+            playFever() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.35);
+                gain.gain.setValueAtTime(0.14, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+            playHurt() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(65, now + 0.25);
+                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        const sfx = new SoundEffects();
+
+        // ==========================================
+        // 2. 畫布與遊戲狀態初始化
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const STORAGE_KEY = 'best_alien_shooter';
+        const HOME_URL = 'index.html'; // 首頁路徑
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 武器定義字典
+        const WEAPONS = {
+            normal: { name: '脈衝步槍', icon: '🔫', color: '#38bdf8', cooldown: 0.16, duration: Infinity },
+            shotgun: { name: '重型擴散霰彈', icon: '💥', color: '#fb923c', cooldown: 0.34, duration: 11 },
+            laser: { name: '高能穿透雷射', icon: '⚡', color: '#f43f5e', cooldown: 0.22, duration: 10 },
+            tesla: { name: '連鎖閃電砲', icon: '🌩️', color: '#c084fc', cooldown: 0.26, duration: 11 },
+            missile: { name: '蜂群追蹤飛彈', icon: '🚀', color: '#34d399', cooldown: 0.24, duration: 11 }
+        };
+
+        // 遊戲核心狀態
+        const state = {
+            status: 'start', // 'start' | 'playing' | 'paused' | 'gameover'
+            bloodMode: false, // 是否開啟血戰模式
+            score: 0,
+            bestScore: parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10),
+            kills: 0,
+            elapsedTime: 0,
+            wave: 1,
+            feverCharge: 0,
+            feverMax: 100,
+            isFever: false,
+            feverTimer: 0,
+            feverDuration: 9.0,
+            shakeTime: 0,
+            shakeIntensity: 0,
+            bulletScaleBonus: 1.0, // 永久子彈變大加成
+            fireRateBonus: 1.0     // 永久射速提升加成
+        };
+
+        // 玩家物件
+        const player = {
+            x: width / 2,
+            y: height / 2,
+            radius: 17,
+            speed: 255,
+            angle: 0,
+            hp: 4,
+            maxHp: 4,
+            hasShield: false,
+            invulnTimer: 0,
+            weapon: 'normal',
+            weaponTimer: 0,
+            fireCooldown: 0
+        };
+
+        // 實體陣列
+        let bullets = [];
+        let lasers = [];
+        let lightnings = [];
+        let enemies = [];
+        let pickups = [];
+        let particles = [];
+        let floatingTexts = [];
+        let spawnTimer = 0;
+
+        // ==========================================
+        // 3. UI 綁定與更新函式
+        // ==========================================
+        const ui = {
+            score: document.getElementById('scoreDisplay'),
+            bestScore: document.getElementById('bestScoreDisplay'),
+            wave: document.getElementById('waveDisplay'),
+            hearts: document.getElementById('heartsContainer'),
+            weaponName: document.getElementById('weaponName'),
+            weaponIcon: document.getElementById('weaponIcon'),
+            weaponBar: document.getElementById('weaponTimerBar'),
+            feverBar: document.getElementById('feverBar'),
+            feverLabel: document.getElementById('feverLabel'),
+            feverOverlay: document.getElementById('feverOverlay'),
+            startModal: document.getElementById('startModal'),
+            gameOverModal: document.getElementById('gameOverModal'),
+            confirmHomeModal: document.getElementById('confirmHomeModal'),
+            touchHint: document.getElementById('touchHint'),
+            bloodCheckbox: document.getElementById('bloodModeCheckbox'),
+            overBloodCheckbox: document.getElementById('overBloodModeCheckbox'),
+            bloodHudBadge: document.getElementById('bloodModeHudBadge'),
+            startBtn: document.getElementById('startBtn')
+        };
+
+        // 同步兩個血戰模式勾選框與按鈕視覺樣式
+        function syncBloodModeUI(checked) {
+            state.bloodMode = checked;
+            ui.bloodCheckbox.checked = checked;
+            ui.overBloodCheckbox.checked = checked;
+            if (checked) {
+                ui.startBtn.style.background = 'linear-gradient(135deg, #f43f5e 0%, #b91c1c 100%)';
+                ui.startBtn.style.boxShadow = '0 0 24px rgba(244, 63, 94, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.4)';
+                ui.startBtn.classList.remove('text-slate-950');
+                ui.startBtn.classList.add('text-white');
+                ui.startBtn.textContent = '血戰出擊 🩸';
+            } else {
+                ui.startBtn.style.background = '';
+                ui.startBtn.style.boxShadow = '';
+                ui.startBtn.classList.remove('text-white');
+                ui.startBtn.classList.add('text-slate-950');
+                ui.startBtn.textContent = '立即出擊 🚀';
+            }
+        }
+
+        ui.bloodCheckbox.addEventListener('change', (e) => syncBloodModeUI(e.target.checked));
+        ui.overBloodCheckbox.addEventListener('change', (e) => syncBloodModeUI(e.target.checked));
+
+        ui.bestScore.textContent = state.bestScore;
+
+        function updateHeartsUI() {
+            let html = '';
+            for (let i = 0; i < player.maxHp; i++) {
+                if (i < player.hp) {
+                    html += '<span class="text-sm sm:text-base drop-shadow">❤️</span>';
+                } else {
+                    html += '<span class="text-sm sm:text-base opacity-25 grayscale">🖤</span>';
+                }
+            }
+            if (player.hasShield) {
+                html += '<span class="text-sm sm:text-base ml-0.5 animate-pulse" title="能量護盾">🛡️</span>';
+            }
+            ui.hearts.innerHTML = html;
+        }
+
+        function updateHUD() {
+            ui.score.textContent = state.score.toLocaleString();
+            if (state.score > state.bestScore) {
+                state.bestScore = state.score;
+                ui.bestScore.textContent = state.bestScore.toLocaleString();
+                localStorage.setItem(STORAGE_KEY, state.bestScore.toString());
+            }
+            ui.wave.textContent = `WAVE ${state.wave}`;
+
+            const wInfo = WEAPONS[player.weapon];
+            ui.weaponName.textContent = state.isFever ? `🔥 超載·${wInfo.name}` : wInfo.name;
+            ui.weaponName.style.color = state.isFever ? '#f472b6' : wInfo.color;
+            ui.weaponIcon.textContent = wInfo.icon;
+
+            if (player.weapon === 'normal') {
+                ui.weaponBar.style.width = '100%';
+                ui.weaponBar.style.backgroundColor = wInfo.color;
+            } else {
+                const pct = Math.max(0, (player.weaponTimer / wInfo.duration) * 100);
+                ui.weaponBar.style.width = `${pct}%`;
+                ui.weaponBar.style.backgroundColor = wInfo.color;
+            }
+
+            if (state.isFever) {
+                const fPct = Math.max(0, (state.feverTimer / state.feverDuration) * 100);
+                ui.feverBar.style.width = `${fPct}%`;
+                ui.feverLabel.textContent = `🔥 OVERDRIVE 超載狂熱 (${state.feverTimer.toFixed(1)}s) 🔥`;
+                ui.feverLabel.className = 'text-[11px] font-sci font-black tracking-widest mt-0.5 text-amber-300 animate-pulse';
+            } else {
+                const cPct = Math.min(100, (state.feverCharge / state.feverMax) * 100);
+                ui.feverBar.style.width = `${cPct}%`;
+                ui.feverLabel.textContent = `OVERDRIVE 能量 ${Math.floor(cPct)}%`;
+                ui.feverLabel.className = 'text-[11px] font-sci font-bold tracking-widest mt-0.5 text-slate-400';
+            }
+        }
+
+        // ==========================================
+        // 4. 輸入控制 (鍵盤 + 滑鼠 + 雙虛擬觸控搖桿)
+        // ==========================================
+        const keys = {};
+        const mouse = { x: width / 2, y: height / 2, active: false };
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            mouse.active = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouse.active = true;
+        });
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('label')) {
+                sfx.init();
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+                mouse.active = true;
+            }
+        });
+
+        // 雙虛擬搖桿狀態
+        const leftStick = { id: null, startX: 0, startY: 0, curX: 0, curY: 0, dx: 0, dy: 0, active: false };
+        const rightStick = { id: null, startX: 0, startY: 0, curX: 0, curY: 0, dx: 0, dy: 0, active: false };
+        const STICK_MAX_R = 48;
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            sfx.init();
+            ui.touchHint.classList.add('hidden');
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.clientX < width * 0.5 && !leftStick.active) {
+                    leftStick.id = t.identifier;
+                    leftStick.startX = leftStick.curX = t.clientX;
+                    leftStick.startY = leftStick.curY = t.clientY;
+                    leftStick.dx = 0;
+                    leftStick.dy = 0;
+                    leftStick.active = true;
+                } else if (t.clientX >= width * 0.5 && !rightStick.active) {
+                    rightStick.id = t.identifier;
+                    rightStick.startX = rightStick.curX = t.clientX;
+                    rightStick.startY = rightStick.curY = t.clientY;
+                    rightStick.dx = 0;
+                    rightStick.dy = 0;
+                    rightStick.active = true;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (leftStick.active && t.identifier === leftStick.id) {
+                    leftStick.curX = t.clientX;
+                    leftStick.curY = t.clientY;
+                    const vx = leftStick.curX - leftStick.startX;
+                    const vy = leftStick.curY - leftStick.startY;
+                    const dist = Math.hypot(vx, vy);
+                    if (dist > 4) {
+                        const clamped = Math.min(dist, STICK_MAX_R);
+                        leftStick.dx = (vx / dist) * (clamped / STICK_MAX_R);
+                        leftStick.dy = (vy / dist) * (clamped / STICK_MAX_R);
+                    } else {
+                        leftStick.dx = 0;
+                        leftStick.dy = 0;
+                    }
+                } else if (rightStick.active && t.identifier === rightStick.id) {
+                    rightStick.curX = t.clientX;
+                    rightStick.curY = t.clientY;
+                    const vx = rightStick.curX - rightStick.startX;
+                    const vy = rightStick.curY - rightStick.startY;
+                    const dist = Math.hypot(vx, vy);
+                    if (dist > 6) {
+                        rightStick.dx = vx / dist;
+                        rightStick.dy = vy / dist;
+                        player.angle = Math.atan2(vy, vx);
+                    }
+                }
+            }
+        }, { passive: false });
+
+        function handleTouchEnd(e) {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (leftStick.active && t.identifier === leftStick.id) {
+                    leftStick.active = false;
+                    leftStick.id = null;
+                    leftStick.dx = 0;
+                    leftStick.dy = 0;
+                } else if (rightStick.active && t.identifier === rightStick.id) {
+                    rightStick.active = false;
+                    rightStick.id = null;
+                    rightStick.dx = 0;
+                    rightStick.dy = 0;
+                }
+            }
+        }
+        canvas.addEventListener('touchend', handleTouchEnd);
+        canvas.addEventListener('touchcancel', handleTouchEnd);
+
+        // ==========================================
+        // 5. 遊戲流程控制 (開始 / 結束 / 返回首頁)
+        // ==========================================
+        function goToHome() {
+            try {
+                if (state.score > state.bestScore) {
+                    localStorage.setItem(STORAGE_KEY, state.score.toString());
+                }
+            } catch (e) {
+                // 忽略受限儲存環境錯誤
+            }
+
+            try {
+                if (window.top && window.top !== window && window.top.location && window.top.location.href) {
+                    window.top.location.assign(HOME_URL);
+                    return;
+                }
+                if (window.location && window.location.href && window.location.protocol !== 'about:') {
+                    window.location.assign(HOME_URL);
+                    return;
+                }
+            } catch (err) {
+                // 若在沙盒或無效 Location 環境中無法直接導向，則改為回到開始畫面
+            }
+
+            state.status = 'start';
+            ui.confirmHomeModal.classList.add('hidden');
+            ui.confirmHomeModal.classList.remove('flex');
+            ui.gameOverModal.classList.add('hidden');
+            ui.gameOverModal.classList.remove('flex');
+            ui.startModal.classList.remove('hidden');
+        }
+
+        function startGame() {
+            sfx.init();
+            state.bloodMode = ui.bloodCheckbox.checked;
+            state.status = 'playing';
+            state.score = 0;
+            state.kills = 0;
+            state.elapsedTime = 0;
+            state.wave = 1;
+            state.feverCharge = 0;
+            state.isFever = false;
+            state.feverTimer = 0;
+            state.bulletScaleBonus = 1.0;
+            state.fireRateBonus = 1.0;
+
+            player.x = width / 2;
+            player.y = height / 2;
+            player.hp = player.maxHp;
+            player.hasShield = false;
+            player.invulnTimer = 1.0;
+            player.weapon = 'normal';
+            player.weaponTimer = 0;
+            player.fireCooldown = 0;
+
+            bullets = [];
+            lasers = [];
+            lightnings = [];
+            enemies = [];
+            pickups = [];
+            particles = [];
+            floatingTexts = [];
+            spawnTimer = 0.15;
+
+            ui.startModal.classList.add('hidden');
+            ui.gameOverModal.classList.add('hidden');
+            ui.gameOverModal.classList.remove('flex');
+            ui.feverOverlay.classList.add('hidden');
+            ui.bloodHudBadge.classList.toggle('hidden', !state.bloodMode);
+
+            updateHeartsUI();
+            updateHUD();
+
+            // 開場立刻生成第一批異形（血戰模式開場直接湧出 18 隻蟲潮！）
+            const initialCount = state.bloodMode ? 18 : 6;
+            for (let i = 0; i < initialCount; i++) {
+                spawnEnemy();
+            }
+        }
+
+        function triggerGameOver() {
+            state.status = 'gameover';
+            sfx.playHurt();
+            triggerShake(14, 0.4);
+            ui.feverOverlay.classList.add('hidden');
+
+            const prevBest = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+            const isNewRecord = state.score > 0 && state.score >= prevBest;
+            if (state.score > prevBest) {
+                localStorage.setItem(STORAGE_KEY, state.score.toString());
+            }
+
+            document.getElementById('finalScore').textContent = state.score.toLocaleString();
+            document.getElementById('finalBestScore').textContent = Math.max(state.score, prevBest).toLocaleString();
+            document.getElementById('finalKills').textContent = state.kills;
+            document.getElementById('finalTime').textContent = `${Math.floor(state.elapsedTime)}s`;
+            document.getElementById('overModeTag').classList.toggle('hidden', !state.bloodMode);
+            ui.overBloodCheckbox.checked = state.bloodMode;
+
+            const badge = document.getElementById('newRecordBadge');
+            if (isNewRecord) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            ui.gameOverModal.classList.remove('hidden');
+            ui.gameOverModal.classList.add('flex');
+        }
+
+        // 按鈕事件綁定
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('startHomeBtn').addEventListener('click', goToHome);
+        document.getElementById('overHomeBtn').addEventListener('click', goToHome);
+
+        document.getElementById('homeBtn').addEventListener('click', () => {
+            if (state.status === 'playing') {
+                state.status = 'paused';
+                ui.confirmHomeModal.classList.remove('hidden');
+                ui.confirmHomeModal.classList.add('flex');
+            } else {
+                goToHome();
+            }
+        });
+
+        document.getElementById('cancelHomeBtn').addEventListener('click', () => {
+            ui.confirmHomeModal.classList.add('hidden');
+            ui.confirmHomeModal.classList.remove('flex');
+            state.status = 'playing';
+        });
+
+        document.getElementById('confirmHomeBtn').addEventListener('click', goToHome);
+
+        // ==========================================
+        // 6. 特效、飄字與敵人生成邏輯
+        // ==========================================
+        function triggerShake(intensity, duration) {
+            state.shakeIntensity = Math.max(state.shakeIntensity, intensity);
+            state.shakeTime = Math.max(state.shakeTime, duration);
+        }
+
+        function addFloatingText(x, y, text, color = '#ffffff', size = 14) {
+            floatingTexts.push({
+                x, y, text, color, size,
+                vy: -42,
+                life: 0.85,
+                maxLife: 0.85
+            });
+        }
+
+        function spawnParticles(x, y, color, count = 10, speedScale = 1) {
+            for (let i = 0; i < count; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = (50 + Math.random() * 170) * speedScale;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    radius: 2 + Math.random() * 3.5,
+                    color,
+                    life: 0.35 + Math.random() * 0.3,
+                    maxLife: 0.65
+                });
+            }
+        }
+
+        // 外星敵人生成 (隨波次強化體型與血量)
+        function spawnEnemy() {
+            const margin = 40;
+            let x, y;
+            const edge = Math.floor(Math.random() * 4);
+            if (edge === 0) { x = Math.random() * width; y = -margin; }
+            else if (edge === 1) { x = width + margin; y = Math.random() * height; }
+            else if (edge === 2) { x = Math.random() * width; y = height + margin; }
+            else { x = -margin; y = Math.random() * height; }
+
+            // 隨時間與波次變大變強
+            const growthFactor = 1 + Math.min(0.85, (state.wave - 1) * 0.09);
+            const roll = Math.random();
+
+            let type = 'swarmer'; // 星際跳蚤 (雜魚)
+            let radius = 13 * growthFactor;
+            let hp = Math.round(18 * growthFactor);
+            let speed = 105 + Math.min(85, state.wave * 9);
+            let color = '#4ade80'; // 螢光綠
+            let score = 15;
+            let feverGain = 4.5;
+
+            if (state.wave >= 4 && roll < 0.09) {
+                // 母艦菁英領主 (巨無霸)
+                type = 'boss';
+                radius = 34 * Math.min(1.35, growthFactor);
+                hp = Math.round(240 * growthFactor);
+                speed = 55 + Math.min(25, state.wave * 2);
+                color = '#f43f5e'; // 猩紅
+                score = 250;
+                feverGain = 22;
+            } else if (state.wave >= 2 && roll < 0.28) {
+                // 自爆能量體 (高速衝鋒)
+                type = 'bomber';
+                radius = 14 * growthFactor;
+                hp = Math.round(15 * growthFactor);
+                speed = 175 + Math.min(95, state.wave * 11);
+                color = '#fb923c'; // 亮橘紅
+                score = 30;
+                feverGain = 6;
+            } else if (roll < 0.52) {
+                // 裝甲異形 (重裝兵)
+                type = 'tank';
+                radius = 21 * growthFactor;
+                hp = Math.round(65 * growthFactor);
+                speed = 72 + Math.min(45, state.wave * 5);
+                color = '#a855f7'; // 霓虹紫
+                score = 50;
+                feverGain = 8;
+            }
+
+            enemies.push({
+                x, y, type, radius,
+                hp, maxHp: hp,
+                speed, color, score, feverGain,
+                hitFlash: 0,
+                knockbackX: 0,
+                knockbackY: 0,
+                wobble: Math.random() * Math.PI * 2
+            });
+        }
+
+        // 掉落道具生成
+        function spawnPickup(x, y, forceWeapon = false) {
+            const roll = Math.random();
+            let kind = 'heal';
+            let icon = '💚';
+            let color = '#4ade80';
+            let label = '生命修復';
+
+            if (forceWeapon || roll < 0.46) {
+                const wTypes = ['shotgun', 'laser', 'tesla', 'missile'];
+                const chosen = wTypes[Math.floor(Math.random() * wTypes.length)];
+                kind = `weapon_${chosen}`;
+                icon = WEAPONS[chosen].icon;
+                color = WEAPONS[chosen].color;
+                label = WEAPONS[chosen].name;
+            } else if (roll < 0.68) {
+                kind = 'heal';
+                icon = '💚';
+                color = '#4ade80';
+                label = '生命 +1';
+            } else if (roll < 0.84) {
+                kind = 'shield';
+                icon = '🛡️';
+                color = '#38bdf8';
+                label = '能量護盾';
+            } else {
+                // 永久強化槍枝 (子彈變大或射速提升)
+                if (Math.random() < 0.5) {
+                    kind = 'big_bullet';
+                    icon = '🔮';
+                    color = '#f472b6';
+                    label = '子彈巨化 UP!';
+                } else {
+                    kind = 'rapid_fire';
+                    icon = '⚡';
+                    color = '#facc15';
+                    label = '射速突破 UP!';
+                }
+            }
+
+            pickups.push({
+                x, y, kind, icon, color, label,
+                radius: 16,
+                life: 14,
+                bob: Math.random() * Math.PI * 2
+            });
+        }
+
+        // ==========================================
+        // 7. 射擊與武器系統
+        // ==========================================
+        function fireWeapon() {
+            const wType = player.weapon;
+            const isFever = state.isFever;
+            const feverScale = isFever ? 1.75 : 1.0;
+            const bRadius = 5.5 * state.bulletScaleBonus * feverScale;
+
+            sfx.playShoot(wType, isFever);
+
+            // 發射單顆子彈輔助函式
+            const createBullet = (ang, speed, dmg, r, color, homing = false, pierce = 1) => {
+                bullets.push({
+                    x: player.x + Math.cos(ang) * (player.radius + 8),
+                    y: player.y + Math.sin(ang) * (player.radius + 8),
+                    vx: Math.cos(ang) * speed,
+                    vy: Math.sin(ang) * speed,
+                    radius: r,
+                    damage: dmg,
+                    color,
+                    homing,
+                    pierce,
+                    life: 1.6
+                });
+            };
+
+            if (wType === 'shotgun') {
+                const pellets = isFever ? 9 : 6;
+                const spread = isFever ? 0.72 : 0.52;
+                for (let i = 0; i < pellets; i++) {
+                    const offset = -spread / 2 + (spread / (pellets - 1)) * i;
+                    createBullet(player.angle + offset, 640, isFever ? 28 : 20, bRadius * 1.15, '#fb923c', false, 1);
+                }
+            } else if (wType === 'laser') {
+                // 穿透雷射光束 (瞬間判定一條直線上的所有敵人)
+                const range = Math.max(width, height) * 1.1;
+                const beamAngles = isFever ? [player.angle - 0.14, player.angle, player.angle + 0.14] : [player.angle];
+                beamAngles.forEach(ang => {
+                    const endX = player.x + Math.cos(ang) * range;
+                    const endY = player.y + Math.sin(ang) * range;
+                    lasers.push({
+                        x1: player.x, y1: player.y,
+                        x2: endX, y2: endY,
+                        width: (isFever ? 18 : 11) * state.bulletScaleBonus,
+                        color: '#f43f5e',
+                        life: 0.14,
+                        maxLife: 0.14
+                    });
+                    // 線段碰撞傷害
+                    const beamHalfW = (isFever ? 22 : 14) * state.bulletScaleBonus;
+                    enemies.forEach(e => {
+                        const dist = pointToSegmentDist(e.x, e.y, player.x, player.y, endX, endY);
+                        if (dist <= e.radius + beamHalfW) {
+                            damageEnemy(e, isFever ? 58 : 38, Math.cos(ang) * 120, Math.sin(ang) * 120);
+                        }
+                    });
+                });
+                triggerShake(isFever ? 5 : 2.5, 0.08);
+            } else if (wType === 'tesla') {
+                // 連鎖閃電：尋找準心方向最近目標並跳躍彈射
+                const maxRange = 460;
+                let firstTarget = null;
+                let bestScore = Infinity;
+                enemies.forEach(e => {
+                    const dx = e.x - player.x;
+                    const dy = e.y - player.y;
+                    const d = Math.hypot(dx, dy);
+                    if (d <= maxRange) {
+                        const angDiff = Math.abs(normalizeAngle(Math.atan2(dy, dx) - player.angle));
+                        if (angDiff < 0.75 && d * (1 + angDiff * 2) < bestScore) {
+                            bestScore = d * (1 + angDiff * 2);
+                            firstTarget = e;
+                        }
+                    }
+                });
+
+                if (firstTarget) {
+                    const maxJumps = isFever ? 7 : 4;
+                    const visited = new Set([firstTarget]);
+                    const chainPoints = [{ x: player.x, y: player.y }, { x: firstTarget.x, y: firstTarget.y }];
+                    damageEnemy(firstTarget, isFever ? 42 : 28, 0, 0);
+
+                    let curr = firstTarget;
+                    for (let j = 1; j < maxJumps; j++) {
+                        let next = null;
+                        let minD = 210;
+                        enemies.forEach(cand => {
+                            if (!visited.has(cand) && cand.hp > 0) {
+                                const d = Math.hypot(cand.x - curr.x, cand.y - curr.y);
+                                if (d < minD) {
+                                    minD = d;
+                                    next = cand;
+                                }
+                            }
+                        });
+                        if (next) {
+                            visited.add(next);
+                            chainPoints.push({ x: next.x, y: next.y });
+                            damageEnemy(next, isFever ? 34 : 22, 0, 0);
+                            curr = next;
+                        } else {
+                            break;
+                        }
+                    }
+                    lightnings.push({ points: chainPoints, life: 0.16, maxLife: 0.16, color: '#c084fc' });
+                } else {
+                    // 沒目標時往前射出電漿球
+                    createBullet(player.angle, 680, 24, bRadius * 1.2, '#c084fc', false, 2);
+                }
+            } else if (wType === 'missile') {
+                const count = isFever ? 4 : 2;
+                for (let i = 0; i < count; i++) {
+                    const spread = (i - (count - 1) / 2) * 0.35;
+                    createBullet(player.angle + spread, 490, isFever ? 36 : 26, bRadius * 1.25, '#34d399', true, 1);
+                }
+            } else {
+                // 預設脈衝步槍
+                if (isFever) {
+                    // Fever 時變成三向巨型電漿砲
+                    [-0.18, 0, 0.18].forEach(off => {
+                        createBullet(player.angle + off, 740, 26, bRadius, '#f472b6', false, 2);
+                    });
+                } else {
+                    createBullet(player.angle, 680, 18, bRadius, '#38bdf8', false, 1);
+                }
+            }
+
+            // Fever 模式額外附加：360度環形脈衝散射
+            if (isFever) {
+                const ringCount = 6;
+                const baseRot = state.elapsedTime * 4;
+                for (let k = 0; k < ringCount; k++) {
+                    const rAng = baseRot + (Math.PI * 2 / ringCount) * k;
+                    createBullet(rAng, 560, 18, 6.5, '#fbbf24', false, 1);
+                }
+            }
+        }
+
+        // ==========================================
+        // 8. 傷害計算、連鎖爆炸與 Fever 觸發
+        // ==========================================
+        function damageEnemy(enemy, dmg, kbX = 0, kbY = 0) {
+            if (enemy.hp <= 0) return;
+            enemy.hp -= dmg;
+            enemy.hitFlash = 0.08;
+            enemy.knockbackX += kbX;
+            enemy.knockbackY += kbY;
+
+            if (enemy.hp <= 0) {
+                killEnemy(enemy);
+            }
+        }
+
+        function killEnemy(enemy) {
+            state.kills++;
+            const scoreMult = (state.isFever ? 2 : 1) * (state.bloodMode ? 1.5 : 1);
+            const gained = Math.round(enemy.score * scoreMult);
+            state.score += gained;
+
+            // 累積 Fever 能量
+            if (!state.isFever) {
+                // 血戰模式怪物多，微調單隻充能避免無限常駐無敵，仍維持超高頻率觸發
+                const feverMult = state.bloodMode ? 0.65 : 1.0;
+                state.feverCharge = Math.min(state.feverMax, state.feverCharge + enemy.feverGain * feverMult);
+                if (state.feverCharge >= state.feverMax) {
+                    activateFever();
+                }
+            }
+
+            sfx.playExplosion(enemy.type === 'boss' || enemy.type === 'bomber');
+            spawnParticles(enemy.x, enemy.y, enemy.color, enemy.type === 'boss' ? 28 : 11, enemy.type === 'boss' ? 1.5 : 1);
+
+            // 自爆能量體死亡時引爆周圍外星人！
+            if (enemy.type === 'bomber') {
+                triggerShake(7, 0.18);
+                spawnParticles(enemy.x, enemy.y, '#f97316', 20, 1.4);
+                addFloatingText(enemy.x, enemy.y - 12, 'BOOM!', '#fb923c', 15);
+                enemies.forEach(other => {
+                    if (other !== enemy && other.hp > 0) {
+                        const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+                        if (d < 115) {
+                            damageEnemy(other, 45, (other.x - enemy.x) * 3, (other.y - enemy.y) * 3);
+                        }
+                    }
+                });
+            }
+
+            // 掉落物判定
+            if (enemy.type === 'boss') {
+                triggerShake(10, 0.25);
+                addFloatingText(enemy.x, enemy.y - 18, `+${gained} 菁英擊殺!`, '#f43f5e', 16);
+                spawnPickup(enemy.x, enemy.y, true);
+            } else {
+                const dropChance = state.bloodMode ? 0.12 : 0.18;
+                if (Math.random() < dropChance) {
+                    spawnPickup(enemy.x, enemy.y, false);
+                }
+            }
+        }
+
+        function activateFever() {
+            state.isFever = true;
+            state.feverTimer = state.feverDuration;
+            state.feverCharge = state.feverMax;
+            sfx.playFever();
+            triggerShake(9, 0.3);
+            ui.feverOverlay.classList.remove('hidden');
+            addFloatingText(player.x, player.y - 35, '🔥 OVERDRIVE 超載啟動！ 🔥', '#f472b6', 18);
+        }
+
+        function applyPickup(p) {
+            sfx.playPickup();
+            spawnParticles(p.x, p.y, p.color, 12, 1.1);
+            addFloatingText(p.x, p.y - 16, p.label, p.color, 15);
+
+            if (p.kind.startsWith('weapon_')) {
+                const wKey = p.kind.replace('weapon_', '');
+                player.weapon = wKey;
+                player.weaponTimer = WEAPONS[wKey].duration;
+            } else if (p.kind === 'heal') {
+                if (player.hp < player.maxHp) {
+                    player.hp++;
+                    updateHeartsUI();
+                } else {
+                    state.score += 100;
+                    addFloatingText(player.x, player.y - 32, '滿血獎勵 +100', '#4ade80', 13);
+                }
+            } else if (p.kind === 'shield') {
+                player.hasShield = true;
+                updateHeartsUI();
+            } else if (p.kind === 'big_bullet') {
+                state.bulletScaleBonus = Math.min(2.1, state.bulletScaleBonus + 0.2);
+            } else if (p.kind === 'rapid_fire') {
+                state.fireRateBonus = Math.min(2.2, state.fireRateBonus + 0.18);
+            }
+        }
+
+        // ==========================================
+        // 9. 主遊戲迴圈 (Update & Render)
+        // ==========================================
+        function update(dt) {
+            if (state.status !== 'playing') return;
+
+            state.elapsedTime += dt;
+            // 每 14 秒推進一個波次，節奏明快
+            state.wave = 1 + Math.floor(state.elapsedTime / 14);
+
+            // 震動衰減
+            if (state.shakeTime > 0) {
+                state.shakeTime -= dt;
+                if (state.shakeTime <= 0) state.shakeIntensity = 0;
+            }
+
+            // 無敵時間衰減
+            if (player.invulnTimer > 0) player.invulnTimer -= dt;
+
+            // Fever 狀態倒數與能量緩慢衰減
+            if (state.isFever) {
+                state.feverTimer -= dt;
+                if (state.feverTimer <= 0) {
+                    state.isFever = false;
+                    state.feverCharge = 0;
+                    ui.feverOverlay.classList.add('hidden');
+                }
+            } else if (state.feverCharge > 0) {
+                state.feverCharge = Math.max(0, state.feverCharge - 2.2 * dt);
+            }
+
+            // 特殊武器倒數
+            if (player.weapon !== 'normal') {
+                player.weaponTimer -= dt;
+                if (player.weaponTimer <= 0) {
+                    player.weapon = 'normal';
+                    player.weaponTimer = 0;
+                }
+            }
+
+            // --- 玩家移動 ---
+            let moveX = 0;
+            let moveY = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveY += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+
+            if (leftStick.active) {
+                moveX = leftStick.dx;
+                moveY = leftStick.dy;
+            } else if (moveX !== 0 || moveY !== 0) {
+                const len = Math.hypot(moveX, moveY);
+                moveX /= len;
+                moveY /= len;
+            }
+
+            const speedMult = state.isFever ? 1.25 : 1.0;
+            player.x += moveX * player.speed * speedMult * dt;
+            player.y += moveY * player.speed * speedMult * dt;
+
+            // 邊界限制
+            const pad = player.radius + 10;
+            player.x = Math.max(pad, Math.min(width - pad, player.x));
+            player.y = Math.max(pad + 54, Math.min(height - pad, player.y));
+
+            // --- 玩家瞄準方向 ---
+            if (!rightStick.active && mouse.active) {
+                player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            }
+
+            // --- 自動射擊 ---
+            player.fireCooldown -= dt;
+            const shouldFire = rightStick.active || mouse.active || enemies.length > 0;
+            if (shouldFire && player.fireCooldown <= 0) {
+                const wCooldown = WEAPONS[player.weapon].cooldown;
+                const feverRate = state.isFever ? 0.62 : 1.0;
+                player.fireCooldown = (wCooldown / state.fireRateBonus) * feverRate;
+                fireWeapon();
+            }
+
+            // --- 敵人波次生成 ---
+            spawnTimer -= dt;
+            if (spawnTimer <= 0) {
+                if (state.bloodMode) {
+                    // 血戰模式：超高頻率 + 大量批次湧入，上限提升至 180 隻
+                    const baseInterval = Math.max(0.11, 0.42 - state.wave * 0.035);
+                    spawnTimer = baseInterval;
+                    const batch = 3 + Math.min(4, Math.floor(state.wave * 0.6));
+                    for (let b = 0; b < batch; b++) {
+                        if (enemies.length < 180) spawnEnemy();
+                    }
+                } else {
+                    // 標準快節奏模式
+                    const baseInterval = Math.max(0.24, 1.05 - state.wave * 0.08);
+                    spawnTimer = baseInterval;
+                    const batch = state.wave >= 4 ? (Math.random() < 0.4 ? 2 : 1) : 1;
+                    for (let b = 0; b < batch; b++) {
+                        if (enemies.length < 65) spawnEnemy();
+                    }
+                }
+            }
+
+            // --- 更新子彈 ---
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.life -= dt;
+
+                // 追蹤飛彈自動轉向最近敵人
+                if (b.homing && enemies.length > 0) {
+                    let nearest = null;
+                    let minDist = 320;
+                    for (let j = 0; j < enemies.length; j++) {
+                        const e = enemies[j];
+                        if (e.hp > 0) {
+                            const d = Math.hypot(e.x - b.x, e.y - b.y);
+                            if (d < minDist) {
+                                minDist = d;
+                                nearest = e;
+                            }
+                        }
+                    }
+                    if (nearest) {
+                        const targetAng = Math.atan2(nearest.y - b.y, nearest.x - b.x);
+                        const curAng = Math.atan2(b.vy, b.vx);
+                        const spd = Math.hypot(b.vx, b.vy);
+                        const diff = normalizeAngle(targetAng - curAng);
+                        const newAng = curAng + Math.max(-6 * dt, Math.min(6 * dt, diff));
+                        b.vx = Math.cos(newAng) * spd;
+                        b.vy = Math.sin(newAng) * spd;
+                    }
+                }
+
+                b.x += b.vx * dt;
+                b.y += b.vy * dt;
+
+                if (b.life <= 0 || b.x < -50 || b.x > width + 50 || b.y < -50 || b.y > height + 50) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // 子彈與敵人碰撞
+                for (let j = 0; j < enemies.length; j++) {
+                    const e = enemies[j];
+                    if (e.hp <= 0) continue;
+                    const dist = Math.hypot(b.x - e.x, b.y - e.y);
+                    if (dist <= b.radius + e.radius) {
+                        const kbScale = e.type === 'boss' ? 0.15 : 0.45;
+                        damageEnemy(e, b.damage, b.vx * kbScale, b.vy * kbScale);
+                        spawnParticles(b.x, b.y, b.color, 4, 0.6);
+                        b.pierce--;
+                        if (b.pierce <= 0) {
+                            bullets.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // --- 更新雷射與閃電殘影 ---
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                lasers[i].life -= dt;
+                if (lasers[i].life <= 0) lasers.splice(i, 1);
+            }
+            for (let i = lightnings.length - 1; i >= 0; i--) {
+                lightnings[i].life -= dt;
+                if (lightnings[i].life <= 0) lightnings.splice(i, 1);
+            }
+
+            // --- 更新敵人與玩家碰撞 ---
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                if (e.hp <= 0) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                if (e.hitFlash > 0) e.hitFlash -= dt;
+                e.wobble += dt * 8;
+
+                // 朝玩家移動 + 擊退衰減
+                const ang = Math.atan2(player.y - e.y, player.x - e.x);
+                e.x += (Math.cos(ang) * e.speed + e.knockbackX) * dt;
+                e.y += (Math.sin(ang) * e.speed + e.knockbackY) * dt;
+                e.knockbackX *= Math.pow(0.05, dt);
+                e.knockbackY *= Math.pow(0.05, dt);
+
+                // 敵人之間輕微推擠避免完全重疊
+                for (let j = i - 1; j >= 0; j--) {
+                    const other = enemies[j];
+                    const dx = e.x - other.x;
+                    const dy = e.y - other.y;
+                    const d = Math.hypot(dx, dy);
+                    const minD = e.radius + other.radius;
+                    if (d > 0 && d < minD) {
+                        const push = (minD - d) * 0.5;
+                        e.x += (dx / d) * push;
+                        e.y += (dy / d) * push;
+                        other.x -= (dx / d) * push;
+                        other.y -= (dy / d) * push;
+                    }
+                }
+
+                // 檢查與玩家碰撞
+                const pDist = Math.hypot(e.x - player.x, e.y - player.y);
+                if (pDist < e.radius + player.radius - 2) {
+                    if (state.isFever) {
+                        // Fever 期間無敵，直接把敵人撞死/撞飛！
+                        damageEnemy(e, 999, Math.cos(ang) * -500, Math.sin(ang) * -500);
+                    } else if (player.invulnTimer <= 0) {
+                        if (player.hasShield) {
+                            player.hasShield = false;
+                            player.invulnTimer = 1.0;
+                            updateHeartsUI();
+                            sfx.playExplosion(false);
+                            triggerShake(6, 0.2);
+                            addFloatingText(player.x, player.y - 25, '🛡️ 護盾抵擋傷害！', '#38bdf8', 15);
+                            // 震開周圍敵人
+                            enemies.forEach(near => {
+                                const nd = Math.hypot(near.x - player.x, near.y - player.y);
+                                if (nd < 160 && nd > 0) {
+                                    near.knockbackX += ((near.x - player.x) / nd) * 450;
+                                    near.knockbackY += ((near.y - player.y) / nd) * 450;
+                                }
+                            });
+                        } else {
+                            player.hp--;
+                            player.invulnTimer = 1.1;
+                            updateHeartsUI();
+                            if (player.hp <= 0) {
+                                triggerGameOver();
+                                return;
+                            } else {
+                                sfx.playHurt();
+                                triggerShake(10, 0.28);
+                                addFloatingText(player.x, player.y - 25, '-1 ❤️', '#f43f5e', 16);
+                                // 震開周圍敵人避免連續秒殺
+                                enemies.forEach(near => {
+                                    const nd = Math.hypot(near.x - player.x, near.y - player.y);
+                                    if (nd < 180 && nd > 0) {
+                                        near.knockbackX += ((near.x - player.x) / nd) * 520;
+                                        near.knockbackY += ((near.y - player.y) / nd) * 520;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- 更新掉落道具與磁吸 ---
+            const magnetRange = state.isFever ? 260 : 85;
+            for (let i = pickups.length - 1; i >= 0; i--) {
+                const p = pickups[i];
+                p.life -= dt;
+                p.bob += dt * 4;
+                if (p.life <= 0) {
+                    pickups.splice(i, 1);
+                    continue;
+                }
+                const dist = Math.hypot(player.x - p.x, player.y - p.y);
+                if (dist < magnetRange) {
+                    const pullSpd = state.isFever ? 460 : 280;
+                    p.x += ((player.x - p.x) / dist) * pullSpd * dt;
+                    p.y += ((player.y - p.y) / dist) * pullSpd * dt;
+                }
+                if (dist < player.radius + p.radius) {
+                    applyPickup(p);
+                    pickups.splice(i, 1);
+                }
+            }
+
+            // --- 更新粒子與飄浮文字 ---
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx * dt;
+                pt.y += pt.vy * dt;
+                pt.vx *= Math.pow(0.1, dt);
+                pt.vy *= Math.pow(0.1, dt);
+                pt.life -= dt;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy * dt;
+                ft.life -= dt;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            updateHUD();
+        }
+
+        // ==========================================
+        // 10. 畫面渲染 (深色科幻網格 + 霓虹發光實體)
+        // ==========================================
+        function draw() {
+            ctx.save();
+
+            // 畫面震動位移
+            if (state.shakeTime > 0 && state.shakeIntensity > 0) {
+                const sx = (Math.random() - 0.5) * state.shakeIntensity * 2;
+                const sy = (Math.random() - 0.5) * state.shakeIntensity * 2;
+                ctx.translate(sx, sy);
+            }
+
+            // 1. 深色科幻背景與戰術網格
+            ctx.fillStyle = state.bloodMode ? '#11070c' : '#070b14';
+            ctx.fillRect(0, 0, width, height);
+
+            const gridSize = 48;
+            ctx.strokeStyle = state.isFever
+                ? 'rgba(236, 72, 153, 0.16)'
+                : (state.bloodMode ? 'rgba(244, 63, 94, 0.11)' : 'rgba(56, 189, 248, 0.08)');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += gridSize) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+            }
+            for (let y = 0; y <= height; y += gridSize) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+            }
+            ctx.stroke();
+
+            // 2. 掉落道具
+            pickups.forEach(p => {
+                const alpha = p.life < 3 ? (Math.sin(p.life * 14) > 0 ? 1 : 0.35) : 1;
+                const offsetY = Math.sin(p.bob) * 4;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y + offsetY, p.radius + 3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = p.color;
+                ctx.stroke();
+
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.icon, p.x, p.y + offsetY + 1);
+                ctx.restore();
+            });
+
+            // 3. 雷射光束
+            lasers.forEach(l => {
+                const ratio = l.life / l.maxLife;
+                ctx.save();
+                ctx.strokeStyle = l.color;
+                ctx.lineWidth = l.width * ratio;
+                ctx.lineCap = 'round';
+                ctx.shadowBlur = 18;
+                ctx.shadowColor = l.color;
+                ctx.beginPath();
+                ctx.moveTo(l.x1, l.y1);
+                ctx.lineTo(l.x2, l.y2);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = l.width * 0.4 * ratio;
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 4. 連鎖閃電
+            lightnings.forEach(lt => {
+                const ratio = lt.life / lt.maxLife;
+                ctx.save();
+                ctx.strokeStyle = lt.color;
+                ctx.lineWidth = 4 * ratio;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = lt.color;
+                ctx.beginPath();
+                for (let i = 0; i < lt.points.length; i++) {
+                    const pt = lt.points[i];
+                    if (i === 0) {
+                        ctx.moveTo(pt.x, pt.y);
+                    } else {
+                        const prev = lt.points[i - 1];
+                        const midX = (prev.x + pt.x) / 2 + (Math.random() - 0.5) * 24;
+                        const midY = (prev.y + pt.y) / 2 + (Math.random() - 0.5) * 24;
+                        ctx.lineTo(midX, midY);
+                        ctx.lineTo(pt.x, pt.y);
+                    }
+                }
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 5. 子彈
+            bullets.forEach(b => {
+                ctx.save();
+                ctx.fillStyle = b.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = b.color;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 6. 外星敵人繪製
+            enemies.forEach(e => {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+                const ang = Math.atan2(player.y - e.y, player.x - e.x);
+                ctx.rotate(ang);
+
+                const drawColor = e.hitFlash > 0 ? '#ffffff' : e.color;
+                ctx.fillStyle = drawColor;
+                ctx.shadowBlur = e.type === 'boss' ? 18 : 8;
+                ctx.shadowColor = e.color;
+
+                // 繪製外星生物觸角/利爪與本體
+                const legSwing = Math.sin(e.wobble) * 3;
+                ctx.strokeStyle = drawColor;
+                ctx.lineWidth = e.type === 'boss' ? 4 : 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, -e.radius * 0.6);
+                ctx.lineTo(e.radius * 0.7, -e.radius * 1.15 + legSwing);
+                ctx.moveTo(0, e.radius * 0.6);
+                ctx.lineTo(e.radius * 0.7, e.radius * 1.15 - legSwing);
+                ctx.stroke();
+
+                // 身體輪廓
+                ctx.beginPath();
+                ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 邪惡發光雙眼
+                ctx.fillStyle = e.hitFlash > 0 ? '#0f172a' : '#fef08a';
+                ctx.beginPath();
+                ctx.arc(e.radius * 0.42, -e.radius * 0.32, e.radius * 0.2, 0, Math.PI * 2);
+                ctx.arc(e.radius * 0.42, e.radius * 0.32, e.radius * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+
+                // 血條 (重裝兵與菁英怪受傷時顯示)
+                if (e.hp < e.maxHp && (e.type === 'tank' || e.type === 'boss')) {
+                    const barW = e.radius * 2;
+                    const barH = 4;
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                    ctx.fillRect(e.x - barW / 2, e.y - e.radius - 10, barW, barH);
+                    ctx.fillStyle = e.color;
+                    ctx.fillRect(e.x - barW / 2, e.y - e.radius - 10, barW * (e.hp / e.maxHp), barH);
+                }
+            });
+
+            // 7. 玩家角色繪製
+            if (state.status !== 'gameover') {
+                const blink = player.invulnTimer > 0 && Math.floor(player.invulnTimer * 16) % 2 === 0;
+                if (!blink) {
+                    ctx.save();
+                    ctx.translate(player.x, player.y);
+
+                    // Fever 光環
+                    if (state.isFever) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, player.radius + 11 + Math.sin(state.elapsedTime * 15) * 3, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(244, 114, 182, 0.85)';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+
+                    // 能量護盾光圈
+                    if (player.hasShield) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, player.radius + 7, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#38bdf8';
+                        ctx.lineWidth = 2.5;
+                        ctx.setLineDash([6, 4]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+
+                    ctx.rotate(player.angle);
+
+                    // 手持科幻武器槍管
+                    const wColor = WEAPONS[player.weapon].color;
+                    ctx.fillStyle = wColor;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = wColor;
+                    ctx.fillRect(4, -5, player.radius + 10, 10);
+
+                    // 太空戰士主體
+                    ctx.fillStyle = '#0f172a';
+                    ctx.strokeStyle = state.isFever ? '#f472b6' : '#38bdf8';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // 頭盔面罩
+                    ctx.fillStyle = state.isFever ? '#fde047' : '#7dd3fc';
+                    ctx.beginPath();
+                    ctx.arc(5, 0, player.radius * 0.55, -Math.PI * 0.42, Math.PI * 0.42);
+                    ctx.fill();
+
+                    ctx.restore();
+                }
+
+                // 電腦版準心提示
+                if (mouse.active && !rightStick.active && state.status === 'playing') {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI * 2);
+                    ctx.moveTo(mouse.x - 16, mouse.y);
+                    ctx.lineTo(mouse.x + 16, mouse.y);
+                    ctx.moveTo(mouse.x, mouse.y - 16);
+                    ctx.lineTo(mouse.x, mouse.y + 16);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // 8. 粒子與飄浮傷害/提示文字
+            particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+                ctx.font = `900 ${ft.size}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillStyle = ft.color;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#000000';
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+
+            // 9. 手機虛擬雙搖桿繪製
+            drawJoystick(leftStick, 'rgba(56, 189, 248, 0.35)');
+            drawJoystick(rightStick, 'rgba(244, 114, 182, 0.4)');
+
+            ctx.restore();
+        }
+
+        function drawJoystick(stick, color) {
+            if (!stick.active) return;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(stick.startX, stick.startY, STICK_MAX_R, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            const knobX = stick.startX + stick.dx * STICK_MAX_R;
+            const knobY = stick.startY + stick.dy * STICK_MAX_R;
+            ctx.beginPath();
+            ctx.arc(knobX, knobY, 20, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // ==========================================
+        // 11. 幾何輔助與主迴圈啟動
+        // ==========================================
+        function normalizeAngle(a) {
+            while (a > Math.PI) a -= Math.PI * 2;
+            while (a < -Math.PI) a += Math.PI * 2;
+            return a;
+        }
+
+        function pointToSegmentDist(px, py, x1, y1, x2, y2) {
+            const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+            if (l2 === 0) return Math.hypot(px - x1, py - y1);
+            let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+        }
+
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            updateHeartsUI();
+            updateHUD();
+            requestAnimationFrame(gameLoop);
+        };
+    })();
+    </script>
+</body>
+</html>
