@@ -776,11 +776,6 @@
                 </div>
 
                 <label class="offset-check">
-                    <input type="checkbox" id="chk-rotate-game">
-                    <span>🔄 允許旋轉方塊（可旋轉已選方塊）</span>
-                </label>
-
-                <label class="offset-check">
                     <input type="checkbox" id="chk-offset-game">
                     <span>📱 觸控上方偏移瞄準（防遮擋）</span>
                 </label>
@@ -1023,15 +1018,16 @@
         }
 
         function setAllowRotate(val) {
+            // 遊戲進行中不允許中途切換是否可旋轉
+            if (state.playing && !state.over) return;
             const allowed = !!val;
             profile.allowRotate = allowed;
             state.allowRotate = allowed;
             localStorage.setItem(KEYS.allowRotate, String(allowed));
-            document.getElementById('chk-rotate-lobby').checked = allowed;
-            document.getElementById('chk-rotate-game').checked = allowed;
+            const lobbyChk = document.getElementById('chk-rotate-lobby');
+            if (lobbyChk) lobbyChk.checked = allowed;
             updateRotateButtonUI();
             updateWaitingBoardInfo();
-            if (state.playing) updateModeBadge();
         }
 
         // 順時針旋轉矩陣 90 度，並保留每一格上的道具資訊
@@ -1064,9 +1060,15 @@
         function updateRotateButtonUI() {
             const btn = document.getElementById('btn-rotate-piece');
             if (!btn) return;
-            btn.classList.toggle('hidden', !state.allowRotate);
+            // 未勾選允許旋轉時，直接隱藏旋轉按鈕
+            if (!state.allowRotate) {
+                btn.classList.add('hidden');
+                btn.disabled = true;
+                return;
+            }
+            btn.classList.remove('hidden');
             const hasPicked = state.pickedSlot !== null && !!state.hands.local[state.pickedSlot];
-            btn.disabled = !state.allowRotate || !hasPicked || !state.playing || state.over;
+            btn.disabled = !hasPicked || !state.playing || state.over;
         }
 
         function setToast(msg, flash = false) {
@@ -1304,9 +1306,7 @@
             });
 
             document.getElementById('chk-rotate-lobby').checked = profile.allowRotate;
-            document.getElementById('chk-rotate-game').checked = profile.allowRotate;
             document.getElementById('chk-rotate-lobby').addEventListener('change', e => setAllowRotate(e.target.checked));
-            document.getElementById('chk-rotate-game').addEventListener('change', e => setAllowRotate(e.target.checked));
             document.getElementById('btn-rotate-piece').addEventListener('click', rotatePickedPiece);
 
             document.getElementById('chk-offset-lobby').checked = profile.offset;
@@ -1572,7 +1572,6 @@
             document.getElementById('game-view').classList.remove('hidden');
             document.getElementById('btn-lobby-back').classList.remove('hidden');
 
-            document.getElementById('chk-rotate-game').checked = !!state.allowRotate;
             updateRotateButtonUI();
             applyBoardCellSize();
             updateModeBadge();
@@ -1669,6 +1668,7 @@
                 boardSize: state.boardSize,
                 difficulty: state.difficulty,
                 timeLimit: state.timeLimit,
+                allowRotate: state.allowRotate,
                 remainingSec: state.remainingSec,
                 board: state.board,
                 score: state.score,
@@ -1700,6 +1700,7 @@
             state.boardSize = ensureValidBoardSize(s.boardSize);
             state.difficulty = ensureValidDifficulty(s.difficulty);
             state.timeLimit = ensureValidTimeLimit(s.timeLimit);
+            state.allowRotate = !!s.allowRotate;
             if (typeof s.remainingSec === 'number') {
                 state.remainingSec = s.remainingSec;
             }
@@ -2111,6 +2112,7 @@
             const waitNote = document.getElementById('replay-wait-note');
             if (state.mode === 'solo' || state.isHost) {
                 document.getElementById('gameover-modal').style.display = 'none';
+                state.allowRotate = profile.allowRotate;
                 resetMatch();
                 showGame();
                 if (state.mode === 'multiplayer' && state.isHost) {
