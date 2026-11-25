@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>神準狙擊手 - 單手專注力與反應訓練</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: none; /* 防止手機滑動捲動或雙指縮放 */
+        }
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        /* 玻璃擬態面板 */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-ring 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative text-white">
+
+    <!-- 遊戲主畫布 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 頂部資訊列 (HUD) -->
+    <div id="hud-top" class="hidden absolute top-0 left-0 w-full p-3 sm:p-4 flex justify-between items-start pointer-events-none z-10">
+        <!-- 左側：返回首頁鈕 + 分數與關卡 -->
+        <div class="flex items-center gap-2">
+            <a href="index.html" title="返回首頁" class="pointer-events-auto glass-panel hover:bg-slate-800/90 active:scale-95 transition-all rounded-2xl p-3 sm:px-3.5 sm:py-3 shadow-lg flex items-center justify-center text-slate-200 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+            </a>
+            <div class="glass-panel rounded-2xl px-3.5 sm:px-4 py-2 shadow-lg flex items-center gap-3 sm:gap-4">
+                <div>
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-medium">關卡 WAVE</div>
+                    <div id="ui-level" class="text-lg sm:text-2xl font-black text-emerald-400">1</div>
+                </div>
+                <div class="h-8 w-px bg-slate-700"></div>
+                <div>
+                    <div class="text-[11px] sm:text-xs text-slate-400 font-medium">積分 SCORE</div>
+                    <div id="ui-score" class="text-lg sm:text-2xl font-black text-amber-400">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中央/右側：任務目標提示 -->
+        <div class="glass-panel rounded-2xl px-4 py-2.5 shadow-lg flex items-center gap-3 max-w-[55%] sm:max-w-xs">
+            <div id="target-badge" class="w-10 h-10 rounded-xl bg-rose-500/20 border-2 border-rose-500 flex items-center justify-center shrink-0">
+                <!-- 目標特徵顏色圓點 -->
+                <span id="target-color-dot" class="w-5 h-5 rounded-full bg-rose-500 shadow-md"></span>
+            </div>
+            <div class="overflow-hidden">
+                <div class="text-[11px] text-rose-400 font-bold tracking-wider uppercase">懸賞目標 TARGET</div>
+                <div id="ui-mission" class="text-sm sm:text-base font-bold text-white truncate">紅衣特務 (剩餘 3 人)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部時間條與操作提示 -->
+    <div id="hud-bottom" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md pointer-events-none z-10 flex flex-col items-center gap-2">
+        <!-- 畫面中央浮動提示訊息 -->
+        <div id="toast-msg" class="opacity-0 transition-opacity duration-300 bg-slate-900/90 border border-slate-700 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
+            精準爆頭 +200
+        </div>
+
+        <!-- 剩餘時間進度條 -->
+        <div class="w-full glass-panel rounded-full p-1.5 shadow-lg">
+            <div class="flex justify-between text-xs px-2 mb-1 font-bold">
+                <span class="text-slate-300">剩餘時間</span>
+                <span id="ui-time-text" class="text-amber-400">45.0s</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="ui-time-bar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-100 rounded-full" style="width: 100%;"></div>
+            </div>
+        </div>
+        <div id="control-hint" class="text-xs text-slate-300/80 bg-black/40 px-3 py-1 rounded-full">
+            👆 按住螢幕開鏡瞄準・放開手指立即射擊
+        </div>
+    </div>
+
+    <!-- 開始畫面 Modal -->
+    <div id="start-screen" class="absolute inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+        <div class="glass-panel rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border border-slate-700/80">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-pulse-slow">
+                <!-- 準星 SVG 圖示 -->
+                <svg class="w-12 h-12 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9" />
+                    <circle cx="12" cy="12" r="3" />
+                    <line x1="12" y1="1" x2="12" y2="5" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="1" y1="12" x2="5" y2="12" />
+                    <line x1="19" y1="12" x2="23" y2="12" />
+                </svg>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white mb-2 tracking-wide">神準狙擊手</h1>
+            <p class="text-slate-300 text-sm sm:text-base mb-6 leading-relaxed">
+                訓練專注力、目標辨識與手眼協調！<br>
+                在人群中找出指定特徵的目標並精準擊發。
+            </p>
+
+            <!-- 單手操作教學圖卡 -->
+            <div class="bg-slate-900/80 rounded-2xl p-4 mb-6 text-left space-y-3 border border-slate-800">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">1</span>
+                    <div class="text-sm text-slate-200"><strong>按住並滑動：</strong>開啟 2.5 倍狙擊鏡，微調準星位置。</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center shrink-0">2</span>
+                    <div class="text-sm text-slate-200"><strong>放開手指：</strong>扣下扳機開火！命中頭部得分加倍。</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center shrink-0">!</span>
+                    <div class="text-sm text-slate-200"><strong>注意辨識：</strong>誤擊無辜市民會扣除時間喔！</div>
+                </div>
+            </div>
+
+            <button id="btn-start" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 transition-all font-black text-lg text-white shadow-lg shadow-emerald-600/30 cursor-pointer">
+                開始任務
+            </button>
+            <a href="index.html" class="mt-3 block w-full py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 active:scale-95 transition-all font-bold text-sm text-slate-300 hover:text-white border border-slate-700/80">
+                ← 返回遊戲大廳
+            </a>
+        </div>
+    </div>
+
+    <!-- 遊戲結束結算 Modal -->
+    <div id="gameover-screen" class="hidden absolute inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-panel rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border border-slate-700">
+            <div class="inline-block px-4 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold mb-2">訓練結算</div>
+            <h2 class="text-3xl font-black text-white mb-2">時間到！任務結束</h2>
+            <div id="new-record-badge" class="hidden inline-block px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold mb-4 animate-bounce">
+                🎉 恭喜刷新最高紀錄！
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6 mt-2">
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
+                    <div class="text-xs text-slate-400 mb-1">最終得分</div>
+                    <div id="end-score" class="text-2xl sm:text-3xl font-black text-amber-400">0</div>
+                </div>
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
+                    <div class="text-xs text-slate-400 mb-1">歷史最高 (BEST)</div>
+                    <div id="end-best" class="text-2xl sm:text-3xl font-black text-purple-400">0</div>
+                </div>
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
+                    <div class="text-xs text-slate-400 mb-1">通過關卡</div>
+                    <div id="end-level" class="text-xl sm:text-2xl font-black text-emerald-400">1</div>
+                </div>
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
+                    <div class="text-xs text-slate-400 mb-1">命中率 / 爆頭</div>
+                    <div id="end-accuracy" class="text-lg sm:text-xl font-black text-sky-400">0% (0)</div>
+                </div>
+            </div>
+
+            <button id="btn-restart" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 transition-all font-black text-lg text-white shadow-lg shadow-emerald-600/30 cursor-pointer">
+                再次挑戰
+            </button>
+            <a href="index.html" class="mt-3 block w-full py-3.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 active:scale-95 transition-all font-bold text-base text-slate-200 hover:text-white border border-slate-700">
+                ← 返回遊戲大廳
+            </a>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 神準狙擊手 - 單手休閒版核心引擎
+         * 包含：Web Audio 擬真音效合成、RWD 畫布縮放、單手按住開鏡/放開射擊物理判定
+         */
+
+        // --- 音效系統 (無需外部音檔，純 Web Audio API 合成) ---
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            // 開鏡機械音
+            playScopeIn() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(280, now);
+                osc.frequency.exponentialRampToValueAtTime(620, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+            // 狙擊槍聲 + 拉槍栓退殼聲
+            playSniperShot() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+
+                // 1. 低頻重擊音
+                const osc = this.ctx.createOscillator();
+                const oscGain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.exponentialRampToValueAtTime(28, now + 0.35);
+                oscGain.gain.setValueAtTime(0.6, now);
+                oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(oscGain);
+                oscGain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+
+                // 2. 白噪音爆裂聲
+                const bufferSize = this.ctx.sampleRate * 0.45;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.08));
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2400, now);
+                filter.frequency.exponentialRampToValueAtTime(300, now + 0.4);
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.7, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+                noise.start(now);
+
+                // 3. 延遲 0.45 秒後的金屬拉槍栓聲
+                setTimeout(() => this.playBoltAction(), 450);
+            }
+            playBoltAction() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [0, 0.12].forEach((offset, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(idx === 0 ? 900 : 1200, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + offset + 0.05);
+                    gain.gain.setValueAtTime(0.12, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.05);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.05);
+                });
+            }
+            // 命中目標清脆提示音
+            playHit(isHeadshot) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(isHeadshot ? 1046.5 : 659.25, now); // C6 or E5
+                osc.frequency.setValueAtTime(isHeadshot ? 1318.5 : 880, now + 0.07);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+            // 誤擊無辜警告音
+            playError() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        const sfx = new SoundEffects();
+
+        // --- 遊戲狀態與設定 ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 目標衣著顏色池
+        const OUTFIT_TYPES = [
+            { id: 'red', name: '紅衣特務', color: '#ef4444', hat: false },
+            { id: 'yellow', name: '黃衣間諜', color: '#eab308', hat: false },
+            { id: 'purple', name: '紫衣首領', color: '#a855f7', hat: true },
+            { id: 'blue', name: '藍衣目標', color: '#3b82f6', hat: true }
+        ];
+
+        // 無辜平民顏色池
+        const CIVILIAN_COLORS = ['#94a3b8', '#64748b', '#cbd5e1', '#14b8a6', '#f97316'];
+
+        let state = {
+            isPlaying: false,
+            level: 1,
+            score: 0,
+            timeLeft: 45,
+            maxTime: 45,
+            shotsFired: 0,
+            shotsHit: 0,
+            headshots: 0,
+            // 狙擊鏡控制
+            isAiming: false,
+            aimX: 0,
+            aimY: 0,
+            lastTouchX: 0,
+            lastTouchY: 0,
+            zoomLevel: 2.6,
+            swayPhase: 0,
+            recoilOffset: 0,
+            flashAlpha: 0,
+            // 關卡目標
+            currentTargetType: OUTFIT_TYPES[0],
+            entities: [],
+            particles: [],
+            floatingTexts: [],
+            buildings: []
+        };
+
+        // 調整畫布尺寸 (RWD)
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            ctx.scale(dpr, dpr);
+            if (!state.isPlaying) {
+                state.aimX = window.innerWidth / 2;
+                state.aimY = window.innerHeight / 2;
+            }
+            generateCityBackground();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // 生成都市背景建築與平台 (讓場景有層次感)
+        function generateCityBackground() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            state.buildings = [];
+            const cols = Math.max(4, Math.floor(w / 140));
+            const colWidth = w / cols;
+
+            for (let i = 0; i < cols; i++) {
+                const bh = h * (0.35 + ((i * 37) % 30) / 100);
+                state.buildings.push({
+                    x: i * colWidth + 6,
+                    y: h - bh - 40,
+                    w: colWidth - 12,
+                    h: bh,
+                    color: i % 2 === 0 ? '#1e293b' : '#263349'
+                });
+            }
+        }
+
+        // 初始化關卡人物
+        function setupLevel(levelNum) {
+            state.level = levelNum;
+            state.entities = [];
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // 隨機挑選本關懸賞目標特徵
+            state.currentTargetType = OUTFIT_TYPES[(levelNum - 1) % OUTFIT_TYPES.length];
+
+            const targetCount = Math.min(2 + Math.floor(levelNum / 2), 5);
+            const civilianCount = Math.min(6 + levelNum * 2, 18);
+            const baseSpeed = 45 + levelNum * 12; // 像素/秒
+
+            // 定義可走動的水平樓層/街道高度
+            const lanes = [h * 0.45, h * 0.62, h * 0.78];
+
+            // 建立懸賞目標
+            for (let i = 0; i < targetCount; i++) {
+                const laneY = lanes[i % lanes.length];
+                state.entities.push({
+                    isTarget: true,
+                    color: state.currentTargetType.color,
+                    hasHat: state.currentTargetType.hat,
+                    x: 50 + Math.random() * (w - 100),
+                    y: laneY,
+                    vx: (Math.random() > 0.5 ? 1 : -1) * (baseSpeed * (0.85 + Math.random() * 0.4)),
+                    walkCycle: Math.random() * Math.PI * 2,
+                    alive: true,
+                    scale: laneY === lanes[0] ? 0.85 : (laneY === lanes[1] ? 1.0 : 1.15)
+                });
+            }
+
+            // 建立無辜平民 (包含干擾色)
+            for (let i = 0; i < civilianCount; i++) {
+                const laneY = lanes[i % lanes.length];
+                // 偶爾混入其他非目標的鮮豔顏色增加辨識挑戰
+                let color = CIVILIAN_COLORS[i % CIVILIAN_COLORS.length];
+                if (levelNum >= 2 && i % 3 === 0) {
+                    const otherTypes = OUTFIT_TYPES.filter(t => t.id !== state.currentTargetType.id);
+                    color = otherTypes[i % otherTypes.length].color;
+                }
+
+                state.entities.push({
+                    isTarget: false,
+                    color: color,
+                    hasHat: i % 4 === 0,
+                    x: 40 + Math.random() * (w - 80),
+                    y: laneY,
+                    vx: (Math.random() > 0.5 ? 1 : -1) * (baseSpeed * (0.7 + Math.random() * 0.5)),
+                    walkCycle: Math.random() * Math.PI * 2,
+                    alive: true,
+                    scale: laneY === lanes[0] ? 0.85 : (laneY === lanes[1] ? 1.0 : 1.15)
+                });
+            }
+
+            // 依 Y 軸排序確保前後遮擋正確
+            state.entities.sort((a, b) => a.y - b.y);
+            updateHUD();
+        }
+
+        // 更新頂部與底部 UI
+        function updateHUD() {
+            document.getElementById('ui-level').textContent = state.level;
+            document.getElementById('ui-score').textContent = state.score;
+
+            const remainingTargets = state.entities.filter(e => e.isTarget && e.alive).length;
+            document.getElementById('ui-mission').textContent = `${state.currentTargetType.name} (剩 ${remainingTargets} 人)`;
+            document.getElementById('target-color-dot').style.backgroundColor = state.currentTargetType.color;
+            document.getElementById('target-badge').style.borderColor = state.currentTargetType.color;
+        }
+
+        // 顯示浮動提示訊息
+        let toastTimer = null;
+        function showToast(text, colorClass = 'text-emerald-400') {
+            const toast = document.getElementById('toast-msg');
+            toast.textContent = text;
+            toast.className = `transition-opacity duration-200 bg-slate-900/95 border border-slate-700 px-4 py-1.5 rounded-full text-sm font-black shadow-xl opacity-100 ${colorClass}`;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 1200);
+        }
+
+        // --- 單手操作事件監聽 (支援觸控與滑鼠) ---
+        function handlePointerDown(x, y) {
+            if (!state.isPlaying) return;
+            sfx.init();
+            sfx.playScopeIn();
+
+            state.isAiming = true;
+            // 首次按下時，直接將準星定位到手指附近（略微往上偏移，避免手指擋住目標）
+            const fingerOffsetY = ('ontouchstart' in window) ? -45 : 0;
+            state.aimX = Math.max(20, Math.min(window.innerWidth - 20, x));
+            state.aimY = Math.max(40, Math.min(window.innerHeight - 40, y + fingerOffsetY));
+            state.lastTouchX = x;
+            state.lastTouchY = y;
+        }
+
+        function handlePointerMove(x, y) {
+            if (!state.isPlaying || !state.isAiming) return;
+            // 開鏡時降低靈敏度 (0.65倍)，讓單手微調爆頭變得非常精準好控制
+            const sensitivity = 0.65;
+            const dx = (x - state.lastTouchX) * sensitivity;
+            const dy = (y - state.lastTouchY) * sensitivity;
+
+            state.aimX = Math.max(15, Math.min(window.innerWidth - 15, state.aimX + dx));
+            state.aimY = Math.max(30, Math.min(window.innerHeight - 30, state.aimY + dy));
+
+            state.lastTouchX = x;
+            state.lastTouchY = y;
+        }
+
+        function handlePointerUp() {
+            if (!state.isPlaying || !state.isAiming) return;
+            state.isAiming = false;
+            fireShot();
+        }
+
+        // 觸控事件
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handlePointerUp();
+        }, { passive: false });
+
+        // 滑鼠事件 (方便電腦版測試與遊玩)
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) handlePointerDown(e.clientX, e.clientY);
+        });
+        window.addEventListener('mousemove', (e) => {
+            handlePointerMove(e.clientX, e.clientY);
+        });
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0) handlePointerUp();
+        });
+
+        // --- 射擊與命中判定邏輯 ---
+        function fireShot() {
+            state.shotsFired++;
+            sfx.playSniperShot();
+
+            // 手機震動回饋
+            if (navigator.vibrate) {
+                navigator.vibrate(45);
+            }
+
+            // 槍口閃光與後座力動畫
+            state.flashAlpha = 0.65;
+            state.recoilOffset = 18;
+
+            // 計算包含呼吸微幅晃動的實際彈著點
+            const swayX = Math.cos(state.swayPhase * 1.3) * 3;
+            const swayY = Math.sin(state.swayPhase * 2.1) * 4;
+            const hitX = state.aimX + swayX;
+            const hitY = state.aimY + swayY;
+
+            // 由前景往背景檢查是否命中人物
+            let hitEntity = null;
+            let isHeadshot = false;
+
+            for (let i = state.entities.length - 1; i >= 0; i--) {
+                const ent = state.entities[i];
+                if (!ent.alive) continue;
+
+                const s = ent.scale;
+                // 頭部判定圓心 (ent.x, ent.y - 38 * s)
+                const headY = ent.y - 38 * s;
+                const distHead = Math.hypot(hitX - ent.x, hitY - headY);
+
+                if (distHead <= 13 * s) {
+                    hitEntity = ent;
+                    isHeadshot = true;
+                    break;
+                }
+
+                // 身體判定矩形
+                const bodyTop = ent.y - 28 * s;
+                const bodyBottom = ent.y + 8 * s;
+                const bodyHalfW = 14 * s;
+
+                if (Math.abs(hitX - ent.x) <= bodyHalfW && hitY >= bodyTop && hitY <= bodyBottom) {
+                    hitEntity = ent;
+                    isHeadshot = false;
+                    break;
+                }
+            }
+
+            if (hitEntity) {
+                hitEntity.alive = false;
+                createHitParticles(hitX, hitY, hitEntity.isTarget ? '#fbbf24' : '#ef4444');
+
+                if (hitEntity.isTarget) {
+                    state.shotsHit++;
+                    if (isHeadshot) state.headshots++;
+                    sfx.playHit(isHeadshot);
+
+                    const points = isHeadshot ? 200 : 100;
+                    const timeBonus = isHeadshot ? 3 : 1.5;
+                    state.score += points;
+                    state.timeLeft = Math.min(state.maxTime, state.timeLeft + timeBonus);
+
+                    showToast(
+                        isHeadshot ? `🎯 完美爆頭！+${points}分 (+${timeBonus}秒)` : `✓ 擊中目標！+${points}分`,
+                        isHeadshot ? 'text-amber-400' : 'text-emerald-400'
+                    );
+
+                    updateHUD();
+
+                    // 檢查是否清空本關所有目標
+                    const remaining = state.entities.filter(e => e.isTarget && e.alive).length;
+                    if (remaining === 0) {
+                        state.score += 300;
+                        showToast(`🏆 關卡完成！獎勵 +300分`, 'text-sky-400');
+                        setTimeout(() => {
+                            if (state.isPlaying) setupLevel(state.level + 1);
+                        }, 700);
+                    }
+                } else {
+                    // 誤擊無辜平民
+                    sfx.playError();
+                    state.timeLeft = Math.max(0, state.timeLeft - 5);
+                    showToast('⚠️ 誤擊平民！時間 -5 秒', 'text-rose-400');
+                }
+            } else {
+                // 射偏打中牆壁火花
+                createHitParticles(hitX, hitY, '#94a3b8');
+            }
+        }
+
+        // 擊中特效粒子
+        function createHitParticles(x, y, color) {
+            for (let i = 0; i < 14; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 40 + Math.random() * 140;
+                state.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    color
+                });
+            }
+        }
+
+        // --- 繪製場景與人物 ---
+        function drawWorld(ctx) {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // 夜空漸層背景
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+            skyGrad.addColorStop(0, '#090d16');
+            skyGrad.addColorStop(0.6, '#131c31');
+            skyGrad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // 遠景月亮
+            ctx.fillStyle = 'rgba(254, 249, 195, 0.15)';
+            ctx.beginPath();
+            ctx.arc(w * 0.82, h * 0.22, 48, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(w * 0.82, h * 0.22, 34, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 城市剪影建築與窗戶燈光
+            state.buildings.forEach((b, idx) => {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+
+                // 裝飾窗戶
+                ctx.fillStyle = 'rgba(250, 204, 21, 0.18)';
+                const cols = Math.floor(b.w / 26);
+                const rows = Math.floor(b.h / 34);
+                for (let r = 1; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if ((r + c + idx) % 3 === 0) {
+                            ctx.fillRect(b.x + 10 + c * 24, b.y + r * 30, 10, 14);
+                        }
+                    }
+                }
+            });
+
+            // 繪製三條街道平台線
+            const lanes = [h * 0.45, h * 0.62, h * 0.78];
+            lanes.forEach((ly, idx) => {
+                ctx.fillStyle = idx === 0 ? '#1e293b' : (idx === 1 ? '#273549' : '#334155');
+                ctx.fillRect(0, ly + 8, w, 14);
+                // 護欄與路燈點綴
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, ly - 4);
+                ctx.lineTo(w, ly - 4);
+                ctx.stroke();
+            });
+
+            // 繪製所有人物
+            state.entities.forEach(ent => {
+                if (!ent.alive) return;
+                drawPerson(ctx, ent);
+            });
+
+            // 繪製粒子特效
+            state.particles.forEach(p => {
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+        }
+
+        // 繪製精緻向量人物
+        function drawPerson(ctx, ent) {
+            ctx.save();
+            ctx.translate(ent.x, ent.y);
+            ctx.scale(ent.scale, ent.scale);
+
+            const legSwing = Math.sin(ent.walkCycle) * 6;
+
+            // 腳底陰影
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            ctx.beginPath();
+            ctx.ellipse(0, 8, 12, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 雙腿 (走路擺動)
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 4.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-4, -6);
+            ctx.lineTo(-4 + legSwing, 7);
+            ctx.moveTo(4, -6);
+            ctx.lineTo(4 - legSwing, 7);
+            ctx.stroke();
+
+            // 身體外套 (任務辨識關鍵顏色)
+            ctx.fillStyle = ent.color;
+            ctx.beginPath();
+            ctx.roundRect(-10, -28, 20, 23, 6);
+            ctx.fill();
+
+            // 如果是懸賞目標，加上微弱的輪廓高光與公事包細節
+            if (ent.isTarget) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // 頭部
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(0, -37, 8.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 帽子 (部分目標特徵)
+            if (ent.hasHat) {
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(-11, -44, 22, 3);
+                ctx.fillRect(-7, -50, 14, 7);
+            }
+
+            ctx.restore();
+        }
+
+        // 繪製狙擊鏡放大視野與十字準星
+        function drawSniperScope(ctx) {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const radius = Math.min(w, h) * 0.34; // 狙擊鏡圓形半徑
+
+            const swayX = Math.cos(state.swayPhase * 1.3) * 3;
+            const swayY = Math.sin(state.swayPhase * 2.1) * 4;
+            const cx = state.aimX + swayX;
+            const cy = state.aimY + swayY - state.recoilOffset;
+
+            // 1. 鏡外暗角遮罩 (專注視野)
+            ctx.save();
+            ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+            ctx.beginPath();
+            ctx.rect(0, 0, w, h);
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+            ctx.fill();
+
+            // 2. 裁切出圓形鏡片並繪製 2.6 倍放大畫面
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.clip();
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(state.zoomLevel, state.zoomLevel);
+            ctx.translate(-cx, -cy);
+            drawWorld(ctx);
+            ctx.restore();
+
+            // 3. 鏡片邊緣內陰影與玻璃反光
+            const lensGrad = ctx.createRadialGradient(cx, cy, radius * 0.72, cx, cy, radius);
+            lensGrad.addColorStop(0, 'rgba(16, 185, 129, 0.03)');
+            lensGrad.addColorStop(0.85, 'rgba(0, 0, 0, 0.35)');
+            lensGrad.addColorStop(1, 'rgba(0, 0, 0, 0.9)');
+            ctx.fillStyle = lensGrad;
+            ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+
+            // 4. 狙擊鏡 Mil-Dot 精密十字刻度線
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            // 水平線
+            ctx.moveTo(cx - radius, cy);
+            ctx.lineTo(cx + radius, cy);
+            // 垂直線
+            ctx.moveTo(cx, cy - radius);
+            ctx.lineTo(cx, cy + radius);
+            ctx.stroke();
+
+            // 刻度小點
+            ctx.fillStyle = '#ef4444';
+            for (let d = -3; d <= 3; d++) {
+                if (d === 0) continue;
+                const step = d * (radius * 0.22);
+                ctx.beginPath();
+                ctx.arc(cx + step, cy, 2.2, 0, Math.PI * 2);
+                ctx.arc(cx, cy + step, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 中心紅點
+            ctx.fillStyle = '#ff2a2a';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 3.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // 5. 狙擊鏡金屬外框
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // --- 主遊戲迴圈 ---
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            if (state.isPlaying) {
+                // 倒數計時
+                state.timeLeft -= dt;
+                if (state.timeLeft <= 0) {
+                    state.timeLeft = 0;
+                    endGame();
+                }
+
+                // 更新時間條 UI
+                const timeRatio = (state.timeLeft / state.maxTime) * 100;
+                const timeBar = document.getElementById('ui-time-bar');
+                timeBar.style.width = `${timeRatio}%`;
+                document.getElementById('ui-time-text').textContent = `${state.timeLeft.toFixed(1)}s`;
+
+                if (state.timeLeft < 10) {
+                    timeBar.className = 'h-full bg-gradient-to-r from-rose-500 to-red-600 transition-all duration-100 rounded-full';
+                } else {
+                    timeBar.className = 'h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-100 rounded-full';
+                }
+
+                // 呼吸晃動與後座力恢復
+                state.swayPhase += dt * 2.5;
+                state.recoilOffset *= Math.pow(0.05, dt);
+                state.flashAlpha *= Math.pow(0.01, dt);
+
+                // 更新人物移動
+                const w = window.innerWidth;
+                state.entities.forEach(ent => {
+                    if (!ent.alive) return;
+                    ent.x += ent.vx * dt;
+                    ent.walkCycle += dt * 10;
+
+                    if (ent.x < 30) {
+                        ent.x = 30;
+                        ent.vx = Math.abs(ent.vx);
+                    } else if (ent.x > w - 30) {
+                        ent.x = w - 30;
+                        ent.vx = -Math.abs(ent.vx);
+                    }
+                });
+
+                // 更新粒子
+                for (let i = state.particles.length - 1; i >= 0; i--) {
+                    const p = state.particles[i];
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.vy += 280 * dt; // 重力
+                    p.life -= dt * 2.2;
+                    if (p.life <= 0) state.particles.splice(i, 1);
+                }
+            }
+
+            // 渲染畫面
+            drawWorld(ctx);
+
+            // 若按住螢幕中，繪製狙擊鏡放大視野
+            if (state.isPlaying && state.isAiming) {
+                drawSniperScope(ctx);
+            } else if (state.isPlaying) {
+                // 未開鏡時顯示淡色預備準星提示
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(state.aimX, state.aimY, 16, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 開火瞬間白光閃爍
+            if (state.flashAlpha > 0.02) {
+                ctx.fillStyle = `rgba(255, 250, 220, ${state.flashAlpha})`;
+                ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- 開始與結束流程控制 ---
+        function startGame() {
+            sfx.init();
+            state.isPlaying = true;
+            state.score = 0;
+            state.timeLeft = 45;
+            state.shotsFired = 0;
+            state.shotsHit = 0;
+            state.headshots = 0;
+            state.isAiming = false;
+            state.aimX = window.innerWidth / 2;
+            state.aimY = window.innerHeight / 2;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('hud-top').classList.remove('hidden');
+            document.getElementById('hud-bottom').classList.remove('hidden');
+
+            setupLevel(1);
+        }
+
+        function endGame() {
+            state.isPlaying = false;
+            state.isAiming = false;
+
+            const accuracy = state.shotsFired > 0
+                ? Math.round((state.shotsHit / state.shotsFired) * 100)
+                : 0;
+
+            // 讀取並更新 localStorage 中的 best_sniper 最高分紀錄
+            const STORAGE_KEY = 'best_sniper';
+            const prevBest = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+            const isNewRecord = state.score > prevBest && state.score > 0;
+            const currentBest = Math.max(prevBest, state.score);
+
+            if (isNewRecord) {
+                localStorage.setItem(STORAGE_KEY, currentBest.toString());
+            }
+
+            document.getElementById('end-score').textContent = state.score;
+            document.getElementById('end-best').textContent = currentBest;
+            document.getElementById('end-level').textContent = `第 ${state.level} 關`;
+            document.getElementById('end-accuracy').textContent = `${accuracy}% (${state.headshots}爆頭)`;
+
+            const recordBadge = document.getElementById('new-record-badge');
+            if (isNewRecord) {
+                recordBadge.classList.remove('hidden');
+            } else {
+                recordBadge.classList.add('hidden');
+            }
+
+            document.getElementById('hud-top').classList.add('hidden');
+            document.getElementById('hud-bottom').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.remove('hidden');
+        }
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+
+        // 啟動初始化
+        window.onload = () => {
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
