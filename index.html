@@ -4,54 +4,172 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全齡益智與反應遊樂園</title>
-    <link rel="stylesheet" href="style.css">
     <style>
+        /* ==========================================
+           1. 全域變數與主題設定 (整合自 style.css)
+           ========================================== */
+        :root {
+            --bg-color: #FFF9E6;      /* 溫暖護眼米黃 */
+            --card-bg: #FFFFFF;
+            --text-main: #2C3E50;
+            --text-muted: #555555;
+            --border-subtle: #E0E0E0;
+            --badge-bg: #EBF5FB;
+            --play-area-bg: #FFFFFF;
+            --primary: #FF9F1C;       
+            --success: #27AE60;       
+            --danger: #E74C3C;        
+            --info: #2980B9;          
+        }
+
+        /* 深色 (黑色) 模式 */
+        [data-theme="dark"] {
+            --bg-color: #121212;      /* 沉浸純黑/深灰背景 */
+            --card-bg: #1E1E1E;       /* 卡片深色 */
+            --text-main: #E0E0E0;     /* 柔和白字 */
+            --text-muted: #A0A0A0;
+            --border-subtle: #333333;
+            --badge-bg: #1A2A3A;
+            --play-area-bg: #181818;
+            --primary: #F39C12;
+            --success: #2ECC71;
+            --danger: #E74C3C;
+            --info: #5DADE2;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* ==========================================
+           2. 頁首與控制列樣式
+           ========================================== */
         header {
             text-align: center;
             margin: 10px 0 20px 0;
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
+        .top-controls {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .btn-control {
+            background-color: var(--info);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1B4F72;
+            transition: transform 0.1s, background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-control:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1B4F72;
+        }
+
+        .btn-view-toggle {
+            background-color: #8E44AD;
+            box-shadow: 0 4px 0 #5B2C6F;
+        }
+
+        .btn-view-toggle:active {
+            box-shadow: 0 2px 0 #5B2C6F;
+        }
+
         h1 {
-            font-size: 2.4rem;
+            font-size: 2.3rem;
             color: #D35400;
             margin: 0 0 8px 0;
         }
+
+        [data-theme="dark"] h1 {
+            color: #F39C12;
+        }
+
         .subtitle {
-            font-size: 1.2rem;
-            color: #555;
+            font-size: 1.15rem;
+            color: var(--text-muted);
             margin: 0;
         }
-        /* 分類篩選按鈕列 */
+
+        /* ==========================================
+           3. 分類篩選按鈕列 (含最近遊玩頁籤)
+           ========================================== */
         .filter-bar {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 25px;
+            width: 100%;
+            max-width: 1100px;
         }
+
         .filter-btn {
-            background: white;
-            border: 3px solid #E0E0E0;
-            padding: 10px 22px;
-            font-size: 1.15rem;
+            background: var(--card-bg);
+            border: 3px solid var(--border-subtle);
+            padding: 10px 20px;
+            font-size: 1.1rem;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
-            color: #555;
+            color: var(--text-muted);
             transition: all 0.2s;
         }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+        }
+
         .filter-btn.active {
             background: var(--primary);
             border-color: var(--primary);
             color: white;
+            box-shadow: 0 4px 10px rgba(255, 159, 28, 0.3);
         }
-        /* 遊戲卡片網格 */
+
+        /* ==========================================
+           4. 遊戲展示區：卡片網格模式 (預設)
+           ========================================== */
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
             gap: 22px;
             width: 100%;
             max-width: 1100px;
         }
+
         .game-card {
             background: var(--card-bg);
             border-radius: 24px;
@@ -61,17 +179,19 @@
             color: inherit;
             box-shadow: 0 8px 20px rgba(0,0,0,0.07);
             border: 4px solid transparent;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s, border-color 0.2s, background-color 0.3s;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
             position: relative;
         }
+
         .game-card:hover, .game-card:active {
             transform: translateY(-5px);
             border-color: var(--primary);
         }
+
         .tag-badge {
             position: absolute;
             top: 16px;
@@ -80,26 +200,30 @@
             color: #856404;
             padding: 4px 12px;
             border-radius: 12px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: bold;
         }
+
         .icon {
             font-size: 4.5rem;
             margin: 10px 0;
         }
+
         .game-title {
             font-size: 1.75rem;
             font-weight: bold;
             margin-bottom: 8px;
         }
+
         .game-desc {
             font-size: 1.1rem;
-            color: #666;
+            color: var(--text-muted);
             line-height: 1.5;
             margin-bottom: 18px;
         }
+
         .score-badge {
-            background: #EBF5FB;
+            background: var(--badge-bg);
             padding: 8px 18px;
             border-radius: 50px;
             font-size: 1.1rem;
@@ -107,6 +231,7 @@
             color: var(--info);
             margin-bottom: 16px;
         }
+
         .play-btn {
             background: var(--success);
             color: white;
@@ -117,29 +242,123 @@
             width: 85%;
             box-shadow: 0 4px 0 #1E8449;
         }
+
+        /* ==========================================
+           5. 遊戲展示區：精簡遊戲清單模式 (.list-mode)
+           僅顯示：圖示、遊戲名稱、最高分
+           ========================================== */
+        .game-grid.list-mode {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .game-grid.list-mode .game-card {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 24px;
+            border-radius: 18px;
+            text-align: left;
+        }
+
+        .game-grid.list-mode .game-card:hover {
+            transform: translateX(6px);
+        }
+
+        /* 隱藏清單模式下不需要的資訊 */
+        .game-grid.list-mode .tag-badge,
+        .game-grid.list-mode .game-desc,
+        .game-grid.list-mode .play-btn {
+            display: none;
+        }
+
+        .list-left-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .game-grid.list-mode .icon {
+            font-size: 2.6rem;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .game-grid.list-mode .game-title {
+            font-size: 1.45rem;
+            margin: 0;
+        }
+
+        .game-grid.list-mode .score-badge {
+            margin: 0;
+            font-size: 1.05rem;
+            padding: 8px 16px;
+            white-space: nowrap;
+        }
+
+        /* ==========================================
+           6. 空狀態提示 (例如尚未有最近遊玩紀錄)
+           ========================================== */
+        .empty-state {
+            grid-column: 1 / -1;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 50px 20px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            width: 100%;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-text {
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* 手機版微調 */
+        @media (max-width: 600px) {
+            h1 { font-size: 1.85rem; }
+            .top-controls { justify-content: center; }
+            .game-grid.list-mode .game-card { padding: 12px 16px; }
+            .game-grid.list-mode .icon { font-size: 2.2rem; }
+            .game-grid.list-mode .game-title { font-size: 1.25rem; }
+            .game-grid.list-mode .score-badge { font-size: 0.95rem; padding: 6px 12px; }
+        }
     </style>
 </head>
 <body>
 
-    <header style="position: relative; width: 100%; max-width: 1100px;">
-        <!-- 右上角的主題切換按鈕 -->
-        <div style="position: absolute; right: 10px; top: 0;">
-            <button class="btn-theme" onclick="toggleTheme()">🌓 切換模式</button>
+    <header>
+        <!-- 頂部功能按鈕列：切換檢視模式 + 切換深淺主題 -->
+        <div class="top-controls">
+            <button class="btn-control btn-view-toggle" id="btn-view-toggle" onclick="toggleViewMode()">
+                📋 遊戲清單
+            </button>
+            <button class="btn-control" onclick="toggleTheme()">
+                🌓 切換模式
+            </button>
         </div>
 
         <h1>🎪 全齡益智與反應遊樂園</h1>
-        <p class="subtitle">點選下方大卡片，隨時隨地動動腦、練反應！</p>
+        <p class="subtitle">點選下方遊戲，隨時隨地動動腦、練反應！</p>
     </header>
 
-    <!-- 分類按鈕 -->
+    <!-- 分類篩選頁籤列 -->
     <div class="filter-bar" id="filter-bar">
-        <button class="filter-btn active" onclick="filterGames('all', this)">🌟 全部遊戲</button>
-        <button class="filter-btn" onclick="filterGames('reaction', this)">⚡ 反應力訓練</button>
-        <button class="filter-btn" onclick="filterGames('brain', this)">🧠 腦力訓練</button>
-        <button class="filter-btn" onclick="filterGames('multiplayer', this)">🌐 連線競賽</button>
+        <button class="filter-btn active" data-category="all" onclick="filterGames('all', this)">🌟 全部遊戲</button>
+        <button class="filter-btn" data-category="recent" onclick="filterGames('recent', this)">🕒 最近遊玩</button>
+        <button class="filter-btn" data-category="reaction" onclick="filterGames('reaction', this)">⚡ 反應力訓練</button>
+        <button class="filter-btn" data-category="brain" onclick="filterGames('brain', this)">🧠 腦力訓練</button>
+        <button class="filter-btn" data-category="multiplayer" onclick="filterGames('multiplayer', this)">🌐 連線競賽</button>
     </div>
 
-    <!-- 遊戲卡片自動生成區 -->
+    <!-- 遊戲列表自動生成區 -->
     <main class="game-grid" id="game-grid"></main>
 
     <script>
@@ -219,17 +438,15 @@
                 desc: '支援單人挑戰或輸入房號與親友即時連線合作，擺放方塊連線消除拿道具！',
                 url: 'coop-blocks.html'
             },
-			
-			{
-                id: 'sniper',               // 對應 localStorage 的 best_sniper
+            {
+                id: 'sniper',
                 title: '神準狙擊手',
                 icon: '🎯',
-                category: 'reaction',       // 屬於反應與手眼協調類
+                category: 'reaction',
                 tag: '單手可玩',
                 desc: '單指按住開鏡微調、放開即刻射擊！在人群中找出懸賞目標。',
-                url: 'sniper_game.html'     // 記得檔名要與儲存的 HTML 檔名一致
+                url: 'sniper_game.html'
             },
-
             {
                 id: 'math',
                 title: '趣味算術挑戰',
@@ -239,8 +456,6 @@
                 desc: '挑戰加減乘除心算速度，越算越靈活！',
                 url: 'math_quiz.html'
             },
-			// 👇 未來要加入你原本的數學或中文遊戲時，把下面這兩段取消註解並修改檔名即可！
-
             {
                 id: 'chinese',
                 title: '中文文字大挑戰',
@@ -250,42 +465,160 @@
                 desc: '認識國字與成語趣味問答，全家一起動動腦！',
                 url: 'chinese-game.html'
             },
-			
-			{
-				id: 'alien_shooter',        // 對應 localStorage 的 best_alien_shooter
-				title: '星際清道夫',        // 或是「異形防衛戰」、「霓虹星際戰」
-				icon: '👾',
-				category: 'reaction',       // 依你需求設定為 reaction
-				tag: '快節奏雙搖桿',
-				desc: '外星蟲群四面八方來襲！極限走位搭配空投重武器，引爆超載模式橫掃全場。',
-				url: 'alien_shooter.html'   // 記得檔名要與儲存的 HTML 檔名一致
-			}
-
-			
+            {
+                id: 'alien_shooter',
+                title: '星際清道夫',
+                icon: '👾',
+                category: 'reaction',
+                tag: '快節奏雙搖桿',
+                desc: '外星蟲群四面八方來襲！極限走位搭配空投重武器，引爆超載模式橫掃全場。',
+                url: 'alien_shooter.html'
+            }
         ];
 
-        // 自動渲染卡片的函式
+        // ==========================================
+        // 狀態管理 (目前分類、檢視模式、深淺主題)
+        // ==========================================
+        let currentCategory = 'all';
+        let isListView = localStorage.getItem('arcade_view_mode') === 'list';
+
+        // 讀取最近遊玩紀錄陣列 (由新到舊排列的遊戲 ID)
+        function getRecentGames() {
+            try {
+                const saved = localStorage.getItem('arcade_recent_games');
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // 記錄玩家點擊的遊戲到最近遊玩清單
+        function recordRecentPlay(gameId) {
+            try {
+                let recent = getRecentGames();
+                // 移除重複的舊紀錄，並將最新點擊的放到最前面
+                recent = recent.filter(id => id !== gameId);
+                recent.unshift(gameId);
+                // 最多保留最近 8 款遊戲
+                if (recent.length > 8) {
+                    recent = recent.slice(0, 8);
+                }
+                localStorage.setItem('arcade_recent_games', JSON.stringify(recent));
+            } catch (e) {
+                console.warn('無法儲存最近遊玩紀錄:', e);
+            }
+        }
+
+        // ==========================================
+        // 切換「卡片模式」與「遊戲清單模式」
+        // ==========================================
+        function applyViewModeUI() {
+            const grid = document.getElementById('game-grid');
+            const toggleBtn = document.getElementById('btn-view-toggle');
+
+            if (isListView) {
+                grid.classList.add('list-mode');
+                toggleBtn.innerHTML = '🃏 卡片模式';
+            } else {
+                grid.classList.remove('list-mode');
+                toggleBtn.innerHTML = '📋 遊戲清單';
+            }
+        }
+
+        function toggleViewMode() {
+            isListView = !isListView;
+            localStorage.setItem('arcade_view_mode', isListView ? 'list' : 'card');
+            applyViewModeUI();
+            renderGames(currentCategory);
+        }
+
+        // ==========================================
+        // 切換「護眼暖米黃」與「深色模式」
+        // ==========================================
+        function initTheme() {
+            const savedTheme = localStorage.getItem('arcade_theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            if (newTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+            }
+            localStorage.setItem('arcade_theme', newTheme);
+        }
+
+        // ==========================================
+        // 自動渲染遊戲卡片 / 清單的函式
+        // ==========================================
         function renderGames(filterCategory = 'all') {
+            currentCategory = filterCategory;
             const grid = document.getElementById('game-grid');
             grid.innerHTML = '';
 
-            const filtered = filterCategory === 'all'
-                ? GAMES_CONFIG
-                : GAMES_CONFIG.filter(g => g.category === filterCategory);
+            let filtered = [];
+
+            if (filterCategory === 'all') {
+                filtered = GAMES_CONFIG;
+            } else if (filterCategory === 'recent') {
+                // 依照最近遊玩的順序取出對應的遊戲物件
+                const recentIds = getRecentGames();
+                filtered = recentIds
+                    .map(id => GAMES_CONFIG.find(g => g.id === id))
+                    .filter(Boolean);
+            } else {
+                filtered = GAMES_CONFIG.filter(g => g.category === filterCategory);
+            }
+
+            // 若「最近遊玩」尚無紀錄，顯示友善提示與引導按鈕
+            if (filtered.length === 0 && filterCategory === 'recent') {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🕹️</div>
+                        <div class="empty-state-text">您還沒有遊玩過任何遊戲喔！<br>快去挑選一款喜歡的遊戲體驗看看吧！</div>
+                        <button class="filter-btn active" onclick="switchToAll()">🌟 瀏覽全部遊戲</button>
+                    </div>
+                `;
+                return;
+            }
 
             filtered.forEach(game => {
                 const bestScore = localStorage.getItem(`best_${game.id}`) || 0;
                 const card = document.createElement('a');
                 card.href = game.url;
                 card.className = 'game-card';
-                card.innerHTML = `
-                    <span class="tag-badge">${game.tag}</span>
-                    <div class="icon">${game.icon}</div>
-                    <div class="game-title">${game.title}</div>
-                    <div class="game-desc">${game.desc}</div>
-                    <div class="score-badge">🏆 最高紀錄：${bestScore} 分</div>
-                    <div class="play-btn">開始遊玩 ▶</div>
-                `;
+
+                // 點擊遊戲時，記錄到「最近遊玩」
+                card.addEventListener('click', () => {
+                    recordRecentPlay(game.id);
+                });
+
+                if (isListView) {
+                    // 清單模式：只顯示最重要的「圖示」、「遊戲名稱」與「最高分」
+                    card.innerHTML = `
+                        <div class="list-left-group">
+                            <div class="icon">${game.icon}</div>
+                            <div class="game-title">${game.title}</div>
+                        </div>
+                        <div class="score-badge">🏆 最高：${bestScore} 分</div>
+                    `;
+                } else {
+                    // 卡片模式：顯示完整資訊
+                    card.innerHTML = `
+                        <span class="tag-badge">${game.tag}</span>
+                        <div class="icon">${game.icon}</div>
+                        <div class="game-title">${game.title}</div>
+                        <div class="game-desc">${game.desc}</div>
+                        <div class="score-badge">🏆 最高紀錄：${bestScore} 分</div>
+                        <div class="play-btn">開始遊玩 ▶</div>
+                    `;
+                }
+
                 grid.appendChild(card);
             });
         }
@@ -297,7 +630,17 @@
             renderGames(category);
         }
 
-        // 網頁載入時執行一次
+        // 從空狀態一鍵切回「全部遊戲」
+        function switchToAll() {
+            const allBtn = document.querySelector('.filter-btn[data-category="all"]');
+            if (allBtn) {
+                filterGames('all', allBtn);
+            }
+        }
+
+        // 網頁載入初始化
+        initTheme();
+        applyViewModeUI();
         renderGames('all');
     </script>
 </body>
