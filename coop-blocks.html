@@ -579,6 +579,13 @@
             flex-shrink: 0;
             cursor: pointer;
         }
+        .offset-check.disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .offset-check.disabled input {
+            cursor: not-allowed;
+        }
 
         .ghost {
             position: fixed;
@@ -769,11 +776,15 @@
             <div class="side-box">
                 <div>
                     <div class="hand-header-row">
-                        <span style="font-weight: 700;">🧱 待選方塊（3 塊用完才補新一批）</span>
-                        <button type="button" class="btn-rotate hidden" id="btn-rotate-piece" disabled>🔄 旋轉 90°</button>
+                        <span style="font-weight: 700;" id="hand-header-title">🧱 待選方塊（3 塊用完才補新一批）</span>
                     </div>
                     <div id="hand-el" class="hand-row"></div>
                 </div>
+
+                <label class="offset-check disabled" id="lbl-rotate-game">
+                    <input type="checkbox" id="chk-rotate-game" disabled>
+                    <span>🔄 允許旋轉方塊（點選已選定方塊旋轉 90°，開局後鎖定）</span>
+                </label>
 
                 <label class="offset-check">
                     <input type="checkbox" id="chk-offset-game">
@@ -1024,10 +1035,26 @@
             profile.allowRotate = allowed;
             state.allowRotate = allowed;
             localStorage.setItem(KEYS.allowRotate, String(allowed));
-            const lobbyChk = document.getElementById('chk-rotate-lobby');
-            if (lobbyChk) lobbyChk.checked = allowed;
-            updateRotateButtonUI();
+            syncRotateRuleUI();
             updateWaitingBoardInfo();
+        }
+
+        // 同步大廳與遊戲內的「允許旋轉方塊」勾選框顯示（遊戲中顯示為反灰不可調整）
+        function syncRotateRuleUI() {
+            const lobbyChk = document.getElementById('chk-rotate-lobby');
+            if (lobbyChk) lobbyChk.checked = profile.allowRotate;
+
+            const gameChk = document.getElementById('chk-rotate-game');
+            if (gameChk) {
+                gameChk.checked = state.allowRotate;
+                gameChk.disabled = true;
+            }
+            const titleEl = document.getElementById('hand-header-title');
+            if (titleEl) {
+                titleEl.textContent = state.allowRotate
+                    ? '🧱 待選方塊（點選後再點可旋轉 90°）'
+                    : '🧱 待選方塊（3 塊用完才補新一批）';
+            }
         }
 
         // 順時針旋轉矩陣 90 度，並保留每一格上的道具資訊
@@ -1044,31 +1071,15 @@
             return rotated;
         }
 
-        function rotatePickedPiece() {
+        function rotateSlotPiece(idx) {
             if (!state.allowRotate || !state.playing || state.over) return;
-            if (state.pickedSlot === null) return;
-            const piece = state.hands.local[state.pickedSlot];
+            const piece = state.hands.local[idx];
             if (!piece || !piece.matrix) return;
 
             piece.matrix = rotateMatrixCW(piece.matrix);
             safeSound('good');
             renderHand();
             drawPreview();
-            updateRotateButtonUI();
-        }
-
-        function updateRotateButtonUI() {
-            const btn = document.getElementById('btn-rotate-piece');
-            if (!btn) return;
-            // 未勾選允許旋轉時，直接隱藏旋轉按鈕
-            if (!state.allowRotate) {
-                btn.classList.add('hidden');
-                btn.disabled = true;
-                return;
-            }
-            btn.classList.remove('hidden');
-            const hasPicked = state.pickedSlot !== null && !!state.hands.local[state.pickedSlot];
-            btn.disabled = !hasPicked || !state.playing || state.over;
         }
 
         function setToast(msg, flash = false) {
@@ -1307,7 +1318,7 @@
 
             document.getElementById('chk-rotate-lobby').checked = profile.allowRotate;
             document.getElementById('chk-rotate-lobby').addEventListener('change', e => setAllowRotate(e.target.checked));
-            document.getElementById('btn-rotate-piece').addEventListener('click', rotatePickedPiece);
+            syncRotateRuleUI();
 
             document.getElementById('chk-offset-lobby').checked = profile.offset;
             document.getElementById('chk-offset-game').checked = profile.offset;
@@ -1572,7 +1583,7 @@
             document.getElementById('game-view').classList.remove('hidden');
             document.getElementById('btn-lobby-back').classList.remove('hidden');
 
-            updateRotateButtonUI();
+            syncRotateRuleUI();
             applyBoardCellSize();
             updateModeBadge();
             renderTimerUI();
@@ -1674,7 +1685,8 @@
                 score: state.score,
                 over: state.over,
                 endReason: state.endReason,
-                stats: state.stats,
+                hostStats: { ...state.stats.local },
+                guestStats: { ...state.stats.remote },
                 hostHand: state.hands.local,
                 guestHand: state.hands.remote,
                 hostItems: state.items.local,
@@ -1708,7 +1720,18 @@
             state.score = s.score;
             state.over = !!s.over;
             state.endReason = s.endReason || '';
-            state.stats = s.stats;
+            // 訪客端將 hostStats 對應至 remote（房主），guestStats 對應至 local（自己）
+            if (s.hostStats && s.guestStats) {
+                state.stats = {
+                    local: { ...s.guestStats },
+                    remote: { ...s.hostStats }
+                };
+            } else if (s.stats) {
+                state.stats = {
+                    local: { ...(s.stats.remote || { cells: 0, lines: 0 }) },
+                    remote: { ...(s.stats.local || { cells: 0, lines: 0 }) }
+                };
+            }
             state.hands.local = s.guestHand;
             state.hands.remote = s.hostHand;
             state.items.local = s.guestItems;
@@ -2307,49 +2330,75 @@
                     slot.addEventListener('click', () => {
                         if (!state.playing || state.over) return;
                         state.armedTool = null;
-                        state.pickedSlot = state.pickedSlot === idx ? null : idx;
-                        renderItems();
-                        renderHand();
-                        renderBoard();
-                        updateRotateButtonUI();
+                        if (state.pickedSlot === idx) {
+                            if (state.allowRotate) {
+                                rotateSlotPiece(idx);
+                            } else {
+                                state.pickedSlot = null;
+                                renderItems();
+                                renderHand();
+                                renderBoard();
+                            }
+                        } else {
+                            state.pickedSlot = idx;
+                            renderItems();
+                            renderHand();
+                            renderBoard();
+                        }
                     });
+
+                    let touchMoved = false;
+                    let touchStartX = 0;
+                    let touchStartY = 0;
+                    let wasPickedOnTouchStart = false;
 
                     slot.addEventListener('touchstart', e => {
                         if (!state.playing || state.over) return;
                         e.preventDefault();
+                        const t = e.touches[0];
+                        touchMoved = false;
+                        touchStartX = t.clientX;
+                        touchStartY = t.clientY;
+                        wasPickedOnTouchStart = (state.pickedSlot === idx);
+
                         state.armedTool = null;
                         state.pickedSlot = idx;
                         renderItems();
                         renderHand();
                         renderBoard();
-                        updateRotateButtonUI();
-                        const t = e.touches[0];
-                        updateTouchGhostAndAim(p, t.clientX, t.clientY);
                     }, { passive: false });
 
                     slot.addEventListener('touchmove', e => {
                         if (!state.playing || state.over || state.pickedSlot !== idx) return;
                         e.preventDefault();
                         const t = e.touches[0];
-                        updateTouchGhostAndAim(p, t.clientX, t.clientY);
+                        if (!touchMoved && (Math.abs(t.clientX - touchStartX) > 10 || Math.abs(t.clientY - touchStartY) > 10)) {
+                            touchMoved = true;
+                        }
+                        if (touchMoved) {
+                            updateTouchGhostAndAim(p, t.clientX, t.clientY);
+                        }
                     }, { passive: false });
 
                     slot.addEventListener('touchend', e => {
                         if (!state.playing || state.over || state.pickedSlot !== idx) return;
                         e.preventDefault();
                         hideGhost();
-                        if (state.hoverPos) {
-                            tryPlace(idx, state.hoverPos.r, state.hoverPos.c);
+                        if (touchMoved) {
+                            if (state.hoverPos) {
+                                tryPlace(idx, state.hoverPos.r, state.hoverPos.c);
+                            }
+                            state.hoverPos = null;
+                            clearPreview();
+                        } else if (wasPickedOnTouchStart && state.allowRotate) {
+                            // 觸控輕點已選定的方塊（未拖曳）時旋轉 90°
+                            rotateSlotPiece(idx);
                         }
-                        state.hoverPos = null;
-                        clearPreview();
                     }, { passive: false });
                 }
 
                 box.appendChild(slot);
             });
-
-            updateRotateButtonUI();
         }
 
         function updateTouchGhostAndAim(piece, touchX, touchY) {
