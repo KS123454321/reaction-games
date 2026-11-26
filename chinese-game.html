@@ -87,7 +87,7 @@
                         </span>
                     </div>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span id="pool-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         <span id="pool-count-text" class="text-xs text-slate-500 dark:text-slate-400 font-medium">精選題庫就緒</span>
                     </div>
                 </div>
@@ -221,7 +221,7 @@
                         字音判斷
                     </span>
                 </div>
-                <span class="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium">
+                <span id="source-tag" class="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium">
                     <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
                     教育部標準校對
                 </span>
@@ -704,11 +704,119 @@
             { keyword: "氛圍", level: "語詞", type: "字音", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">氛</span>圍」的「氛」，台灣標準讀音為「<span class="text-rose-600 dark:text-rose-400 font-black">ㄈㄣˋ</span>」。`, isCorrect: false, explanation: "錯誤！「氛」讀作「ㄈㄣ」（陰平），如氣氛。" },
             { keyword: "潛力", level: "語詞", type: "字音", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">潛</span>力」的「潛」，台灣標準讀音為「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄑㄧㄢˊ</span>」。`, isCorrect: true, explanation: "正確！「潛」讀作「ㄑㄧㄢˊ」（陽平）。" },
             { keyword: "期期艾艾", level: "成語", type: "字音", promptHtml: `「期期<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">艾艾</span>」（形容口吃）的「艾艾」讀作「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄞˋ ㄞˋ</span>」。`, isCorrect: true, explanation: "正確！典故出自漢代周昌與鄧艾口吃。" },
-            { keyword: "病入膏肓", level: "成語", type: "字音", promptHtml: `「病入膏<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">肓</span>」的「肓」讀作「<span class="text-rose-600 dark:text-rose-400 font-black">ㄇㄤˊ</span>」。`, isCorrect: false, explanation: "字形與讀音陷阱！肉字旁的是「肓」（ㄏㄨㄤ），目字旁才是「盲」（ㄇㄤˊ）。" }
+            { keyword: "病入膏肓", level: "成語", type: "字音", promptHtml: `「病入膏<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">肓</span>」的「肓」讀作「<span class="text-rose-600 dark:text-rose-400 font-black">ㄇㄤˊ</span>」。`, isCorrect: false, explanation: "字形與讀音陷阱！肉字旁的是「肓」（ㄏㄨㄤ），目字旁才是「盲」（ㄇㄤˊ）。" },
+            // --- 擴充精選常考字音、字形與部首 ---
+            { keyword: "叱咤風雲", level: "成語", type: "字音", promptHtml: `「叱<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">咤</span>風雲」的「咤」讀作「<span class="text-rose-600 dark:text-rose-400 font-black">ㄔㄚˋ</span>」。`, isCorrect: false, explanation: "破音字陷阱！「叱咤」的「咤」台灣教育部標準讀音為「ㄓㄚˋ」（炸），怒喝的意思；只有在「吒」（如哪吒）才讀「ㄓㄚ」。" },
+            { keyword: "押解", level: "語詞", type: "字音", promptHtml: `「押<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">解</span>」（押送犯人）的「解」讀作「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄐㄧㄝˋ</span>」。`, isCorrect: true, explanation: "正確！「解」作押送解釋時讀「ㄐㄧㄝˋ」，如押解、解送；作姓氏時讀「ㄒㄧㄝˋ」；作理解解釋時讀「ㄐㄧㄝˇ」。" },
+            { keyword: "處心積慮", level: "成語", type: "字音", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">處</span>心積慮」的「處」讀作「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄔㄨˇ</span>」。`, isCorrect: true, explanation: "正確！「處」作動詞（居住、存心、辦理）時讀「ㄔㄨˇ」（上聲），如處心積慮、設身處地；作名詞（地方）時讀「ㄔㄨˋ」。" },
+            { keyword: "提綱挈領", level: "成語", type: "字音", promptHtml: `「提綱<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">挈</span>領」的「挈」讀作「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄑㄧㄝˋ</span>」。`, isCorrect: true, explanation: "正確！「挈」（ㄑㄧㄝˋ）是提、舉的意思，切勿誤讀為「ㄑㄧˋ」。" },
+            { keyword: "風聲鶴唳", level: "成語", type: "字音", promptHtml: `「風聲鶴<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">唳</span>」的「唳」讀作「<span class="text-rose-600 dark:text-rose-400 font-black">ㄌㄧㄝˋ</span>」。`, isCorrect: false, explanation: "錯誤！「唳」讀作「ㄌㄧˋ」（立），指鶴鳥高聲鳴叫。" },
+            { keyword: "戛然而止", level: "成語", type: "字音", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">戛</span>然而止」的「戛」讀作「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄐㄧㄚˊ</span>」。`, isCorrect: true, explanation: "正確！「戛」（ㄐㄧㄚˊ）形容聲音突然停止，切勿誤讀為「ㄍㄚˊ」。" },
+            { keyword: "一曝十寒", level: "成語", type: "字音", promptHtml: `「一<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">曝</span>十寒」的「曝」讀作「<span class="text-emerald-600 dark:text-emerald-400 font-black">ㄆㄨˋ</span>」。`, isCorrect: true, explanation: "正確！「曝」作曬太陽解釋時讀「ㄆㄨˋ」，如一曝十寒、曝曬；作曝光解釋時讀「ㄅㄠˋ」。" },
+            { keyword: "鞠躬盡瘁", level: "成語", type: "字形", promptHtml: `「鞠躬盡<span class="text-rose-600 dark:text-rose-400 font-black">粹</span>」的「粹」字形完全正確。`, isCorrect: false, explanation: "字形錯誤！正確寫法是「鞠躬盡瘁（ㄘㄨㄟˋ）」，為「疒」部，指過度勞累；「粹」則是純粹的意思。" },
+            { keyword: "別出心裁", level: "成語", type: "字形", promptHtml: `「別出心<span class="text-emerald-600 dark:text-emerald-400 font-black">裁</span>」的「裁」字形完全正確。`, isCorrect: true, explanation: "正確！「裁」有設計、籌劃的意思，常有人誤寫為「才」。" },
+            { keyword: "肆無忌憚", level: "成語", type: "字形", promptHtml: `「<span class="text-emerald-600 dark:text-emerald-400 font-black">肆</span>無忌憚」的「肆」字形完全正確。`, isCorrect: true, explanation: "正確！「肆」（ㄙˋ）是放縱、任意妄為的意思，切勿與修業的「肄」（ㄧˋ）混淆。" },
+            { keyword: "水洩不通", level: "成語", type: "字形", promptHtml: `「水<span class="text-rose-600 dark:text-rose-400 font-black">泄</span>不通」與「水<span class="text-emerald-600 dark:text-emerald-400 font-black">洩</span>不通」在教育部辭典中皆為標準寫法。`, isCorrect: true, explanation: "正確！在教育部《重編國語辭典修訂本》中，「水洩不通」與「水泄不通」兩者皆收錄為正詞。" },
+            { keyword: "首屈一指", level: "成語", type: "字形", promptHtml: `「<span class="text-rose-600 dark:text-rose-400 font-black">手</span>屈一指」的「手」字形完全正確。`, isCorrect: false, explanation: "字形錯誤！正確寫法是「首屈一指」，「首」是首先、第一的意思，計算人數時首先彎下大拇指，表示居第一位。" },
+            { keyword: "川", level: "單字", type: "部首", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">川</span>」（河川）的部首就是「<span class="text-emerald-600 dark:text-emerald-400 font-black">巛（川）</span>」部。`, isCorrect: true, explanation: "正確！「川」本身就是部首字，屬於「巛」（ㄔㄨㄢ）部，共 3 畫。" },
+            { keyword: "望", level: "單字", type: "部首", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">望</span>」（希望）的部首是「<span class="text-emerald-600 dark:text-emerald-400 font-black">月</span>」部。`, isCorrect: true, explanation: "正確！「望」的部首是右上方的「月」部，共 11 畫，不是下方的「王」部。" },
+            { keyword: "影", level: "單字", type: "部首", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">影</span>」（影子）的部首是「<span class="text-rose-600 dark:text-rose-400 font-black">日</span>」部。`, isCorrect: false, explanation: "錯誤！「影」的部首是右邊的「彡」（ㄕㄢ）部，共 15 畫，表示光影的紋路。" },
+            { keyword: "舊", level: "單字", type: "部首", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">舊</span>」（新舊）的部首是「<span class="text-emerald-600 dark:text-emerald-400 font-black">臼</span>」部。`, isCorrect: true, explanation: "正確！「舊」的部首是最下方的「臼」（ㄐㄧㄡˋ）部，共 18 畫，並非最上方的「艸」部。" },
+            { keyword: "題", level: "單字", type: "部首", promptHtml: `「<span class="text-amber-600 dark:text-amber-400 underline decoration-amber-400/70 underline-offset-8">題</span>」（題目）的部首是「<span class="text-rose-600 dark:text-rose-400 font-black">是</span>」部。`, isCorrect: false, explanation: "錯誤！「題」的部首是右邊的「頁」部，共 18 畫。" }
         ];
 
         // ==========================================
-        // 2. 智慧動態題庫擴充引擎
+        // 2. 免設定即時雲端題庫擴充引擎 (背景自動預載 + 搜尋校對)
+        // ==========================================
+        const cloudQuestionPool = [];
+        let isFetchingCloud = false;
+
+        // 無需玩家設定 API Key，自動透過執行環境在背景擴充最新考題
+        async function fetchCloudQuestionsInBackground(categoryFilter = 'ALL') {
+            if (isFetchingCloud) return;
+            isFetchingCloud = true;
+
+            const dotEl = document.getElementById('pool-dot');
+            if (dotEl) dotEl.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping";
+
+            const apiKey = ""; // 環境自動注入，無需使用者手動填寫
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const focusTopic = categoryFilter === 'ALL' ? '字音（破音字）、字形（易錯別字）、難檢部首' : `「${categoryFilter}」`;
+            const promptText = `請依據中華民國教育部《重編國語辭典修訂本》與《一字多音審訂表》，出 6 題台灣國語文「是非題」（3題正確敘述、3題常見陷阱錯誤敘述），題型聚焦於：${focusTopic}。
+請嚴格以 JSON 陣列回傳，每題格式如下：
+[
+  {
+    "keyword": "測驗核心詞彙或單字",
+    "level": "單字 或 語詞 或 成語",
+    "type": "字音 或 字形 或 部首",
+    "promptText": "題目完整敘述（例如：「龜」裂的「龜」讀作「ㄐㄩㄣ」。）",
+    "isCorrect": true,
+    "explanation": "簡明扼要的教育部標準解析（50字以內）"
+  }
+]
+只回傳純 JSON 陣列，不要任何 markdown 標記或額外文字。`;
+
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                tools: [{ "google_search": {} }],
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            };
+
+            try {
+                // 指數退避重試機制
+                let response = null;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) break;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+                }
+
+                if (response && response.ok) {
+                    const result = await response.json();
+                    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (rawText) {
+                        const cleaned = rawText.replace(/```json|```/g, '').trim();
+                        const parsed = JSON.parse(cleaned);
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(item => {
+                                if (item.keyword && item.promptText && typeof item.isCorrect === 'boolean') {
+                                    // 將引號內的重點加上高對比視覺樣式
+                                    const styledPrompt = item.promptText.replace(
+                                        /「([^」]+)」/g,
+                                        `「<span class="text-amber-600 dark:text-amber-400 font-black">$1</span>」`
+                                    );
+                                    cloudQuestionPool.push({
+                                        keyword: `${item.keyword}_cloud_${Date.now()}_${Math.random()}`,
+                                        level: item.level || "精選",
+                                        type: item.type || "綜合",
+                                        promptHtml: styledPrompt,
+                                        isCorrect: item.isCorrect,
+                                        explanation: item.explanation || "依據教育部國語辭典標準校對。",
+                                        isCloud: true
+                                    });
+                                }
+                            });
+                            updatePoolBadge();
+                        }
+                    }
+                }
+            } catch (err) {
+                // 若環境無網路或無預設金鑰，靜默降級使用本地龐大題庫，完全不影響玩家體驗
+            } finally {
+                isFetchingCloud = false;
+                if (dotEl) dotEl.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
+            }
+        }
+
+        // ==========================================
+        // 3. 本地智慧動態題庫擴充引擎 (離線無窮題庫保障)
         // ==========================================
         function generateExpandedDynamicQuestion(categoryFilter) {
             const dictionaryPool = [
@@ -775,17 +883,27 @@
             lucide.createIcons();
             updatePoolBadge();
             nextQuestion();
+            // 啟動免金鑰背景即時題庫擴充
+            fetchCloudQuestionsInBackground('ALL');
         };
 
         function updatePoolBadge() {
             const category = document.getElementById('category-filter').value;
-            const count = category === 'ALL' 
+            const builtinCount = category === 'ALL' 
                 ? BUILTIN_QUESTIONS.length 
                 : BUILTIN_QUESTIONS.filter(q => q.type === category).length;
-            document.getElementById('pool-count-text').textContent = `精選 ${count}+ 題庫就緒`;
+            const cloudCount = category === 'ALL'
+                ? cloudQuestionPool.length
+                : cloudQuestionPool.filter(q => q.type === category).length;
+
+            if (cloudCount > 0) {
+                document.getElementById('pool-count-text').textContent = `精選 ${builtinCount}+ 題 ｜ 雲端即時 +${cloudCount} 題`;
+            } else {
+                document.getElementById('pool-count-text').textContent = `精選 ${builtinCount}+ 題庫就緒`;
+            }
         }
 
-        // 切換遊戲模式
+        // 切換遊戲模式（休閒練習 vs 60秒反應挑戰）
         function switchPlayMode(mode) {
             if (gameState.playMode === mode) return;
             gameState.playMode = mode;
@@ -830,7 +948,10 @@
         }
 
         function handleCategoryChange() {
+            const category = document.getElementById('category-filter').value;
             updatePoolBadge();
+            // 切換分類時也背景預載該分類的新題
+            fetchCloudQuestionsInBackground(category);
             if (gameState.playMode === 'training' || gameState.timedActive) {
                 nextQuestion();
             }
@@ -905,6 +1026,23 @@
 
         function pickNextQuestion() {
             const category = document.getElementById('category-filter').value;
+
+            // 優先檢查是否有尚未作答的「即時雲端題庫」
+            const cloudCandidates = cloudQuestionPool.filter(q => {
+                const matchCat = (category === 'ALL' || q.type === category);
+                return matchCat && !gameState.sessionSeenKeywords.has(q.keyword);
+            });
+
+            // 當雲端題庫剩餘不足 2 題時，背景自動再補充一批
+            if (cloudCandidates.length <= 2) {
+                fetchCloudQuestionsInBackground(category);
+            }
+
+            // 混合抽取（若有雲端新題，40% 機率優先出現雲端新題，保持新鮮感）
+            if (cloudCandidates.length > 0 && Math.random() < 0.4) {
+                return cloudCandidates[Math.floor(Math.random() * cloudCandidates.length)];
+            }
+
             const candidates = BUILTIN_QUESTIONS.filter(q => {
                 const matchCat = (category === 'ALL' || q.type === category);
                 const notSeenSession = !gameState.sessionSeenKeywords.has(q.keyword);
@@ -914,6 +1052,10 @@
 
             if (candidates.length > 0) {
                 return candidates[Math.floor(Math.random() * candidates.length)];
+            }
+
+            if (cloudCandidates.length > 0) {
+                return cloudCandidates[Math.floor(Math.random() * cloudCandidates.length)];
             }
 
             const fallbackCandidates = BUILTIN_QUESTIONS.filter(q => {
@@ -941,6 +1083,15 @@
 
             document.getElementById('badge-level').textContent = q.level;
             document.getElementById('badge-type').textContent = `${q.type}判斷`;
+
+            // 更新來源標籤（區分內建精選與雲端即時生成）
+            const sourceTag = document.getElementById('source-tag');
+            if (q.isCloud) {
+                sourceTag.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-indigo-500"></i> 雲端即時搜尋校對`;
+            } else {
+                sourceTag.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> 教育部標準校對`;
+            }
+            lucide.createIcons();
 
             const contentEl = document.getElementById('question-content');
             contentEl.classList.remove('animate-pop-in');
