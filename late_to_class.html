@@ -918,12 +918,16 @@
     });
 
     // ==================== 學生類型與精準速度設計 ====================
+    // 預警轉頭空檔預設約 1.75 秒，對應三排距離：
+    // 衝刺王 (360 px/s) -> 1.75秒內可達最遠的第一排
+    // 普通生 (245 px/s) -> 1.75秒內可穩健抵達第二排
+    // 慢吞吞 (155 px/s) -> 1.75秒內剛好溜進最近的第三排
     const STUDENT_TYPES = [
-        { type: 'sprinter', emoji: '🏃‍♂️', name: '衝刺王', trait: '極速衝刺', speed: 255, timid: false, phone: false },
-        { type: 'normal',   emoji: '🎒', name: '普通生', trait: '步伐穩健', speed: 175, timid: false, phone: false },
-        { type: 'slow',     emoji: '🐢', name: '慢吞吞', trait: '龜速前進', speed: 105, timid: false, phone: false },
-        { type: 'timid',    emoji: '😰', name: '膽小鬼', trait: '預警會頓住', speed: 185, timid: true,  phone: false },
-        { type: 'phone',    emoji: '📱', name: '低頭族', trait: '偶爾滑手機', speed: 195, timid: false, phone: true  }
+        { type: 'sprinter', emoji: '🏃‍♂️', name: '衝刺王', trait: '極速衝刺', speed: 360, timid: false, phone: false },
+        { type: 'normal',   emoji: '🎒', name: '普通生', trait: '步伐穩健', speed: 245, timid: false, phone: false },
+        { type: 'slow',     emoji: '🐢', name: '慢吞吞', trait: '龜速前進', speed: 155, timid: false, phone: false },
+        { type: 'timid',    emoji: '😰', name: '膽小鬼', trait: '預警會頓住', speed: 260, timid: true,  phone: false },
+        { type: 'phone',    emoji: '📱', name: '低頭族', trait: '偶爾滑手機', speed: 270, timid: false, phone: true  }
     ];
 
     const RANDOM_EVENTS = [
@@ -932,6 +936,8 @@
         { text: '🐦 窗外飛來一隻大鳥！老師看窗外 (3.5秒)', duration: 3.5 },
         { text: '💻 投影機突然閃爍！老師忙著調整 (4秒)', duration: 4.0 }
     ];
+
+    const TEACH_ACTIONS = ['✍️ 寫黑板中', '📖 講解課文', '📐 畫重點中', '🗣️ 轉身板書'];
 
     // ==================== 狀態變數 ====================
     let bestScore = parseInt(localStorage.getItem('best_late_class') || '0', 10);
@@ -947,17 +953,17 @@
         timeLeft: 35,
         rows: 3,
         cols: 4,
-        seats: [],          // { id, row, col, occupied, isGold, score, el, distractUsed }
-        queue: [],          // 走廊學生
+        seats: [],
+        queue: [],
         selectedQueueId: null,
-        movingStudents: [], // 移動中學生
+        movingStudents: [],
         distractCharges: 2,
         // 老師狀態機: 'teaching' | 'warning' | 'fakeout' | 'watching' | 'distracted'
         teacherState: 'teaching',
-        teacherTimer: 2.8,
-        teacherX: 50,       // 百分比 18 ~ 82
+        teacherTimer: 2.5,
+        teacherX: 50,
         teacherDir: 1,
-        teacherPauseTimer: 0, // 老師講課停頓計時
+        teacherPauseTimer: 0,
         teacherActionText: '✍️ 寫黑板中',
         eventCooldown: 8,
         lastTimestamp: 0
@@ -986,57 +992,53 @@
         state.movingStudents = [];
         state.distractCharges = 2;
 
-        // 固定為 3 排（第一排最遠、第二排中間、第三排靠後門），高關卡可擴增至 4 排
-        state.rows = lvl >= 4 ? 4 : 3;
+        // 固定維持 3 排 4 列 (共 12 席)，清楚對應第一排(最遠)、第二排(中間)、第三排(近後門)
+        state.rows = 3;
         state.cols = 4;
         const totalSeats = state.rows * state.cols;
 
-        // 調整教室高度以容納排數
-        classroomArena.style.height = state.rows === 4 ? '310px' : '274px';
-        visionCone.style.height = state.rows === 4 ? '310px' : '274px';
-
         // 初始已有 2~3 位乖學生坐好
-        const preOccupiedCount = Math.min(3, Math.max(1, 4 - Math.floor(lvl / 2)));
+        const preOccupiedCount = lvl === 1 ? 3 : 2;
         const neededStudents = totalSeats - preOccupiedCount;
 
         // 時間隨人數與關卡動態調整
         state.timeLeft = Math.max(24, neededStudents * 2.8 - (lvl - 1) * 1.0);
         state.teacherState = 'teaching';
-        state.teacherTimer = Math.max(2.2, 3.4 - lvl * 0.12);
+        state.teacherTimer = Math.max(2.4, 3.6 - lvl * 0.12);
         state.teacherX = 50;
         state.teacherPauseTimer = 1.2;
         state.teacherActionText = '✍️ 寫黑板中';
-        state.eventCooldown = 6 + Math.random() * 4;
+        state.eventCooldown = 7 + Math.random() * 4;
 
         buildSeats(preOccupiedCount);
         buildQueue(neededStudents);
         updateTeacherVisuals();
         updateHUD();
-        setBanner('趁老師寫黑板或出現 ❗ 預警空檔，從後門溜進去！', '');
+        setBanner('趁老師寫黑板或剛出現 ❗ 時，從後門溜進座位！', '');
     }
 
     function buildSeats(preOccupiedCount) {
         classroomArena.innerHTML = '';
         state.seats = [];
 
-        // 挑選黃金高分座位（偏向第一、二排與窗邊）
+        // 挑選黃金高分座位（偏向最遠的第一排與靠窗側）
         const goldIndices = new Set();
-        while (goldIndices.size < Math.min(3, state.rows)) {
-            const r = Math.floor(Math.random() * Math.max(2, state.rows - 1));
+        while (goldIndices.size < 3) {
+            const r = Math.random() < 0.65 ? 0 : 1;
             const c = Math.random() < 0.7 ? (Math.random() < 0.5 ? 0 : state.cols - 1) : Math.floor(Math.random() * state.cols);
             goldIndices.add(`${r}-${c}`);
         }
 
-        // 挑選預先就坐的座位
+        // 挑選預先就坐的座位（優先放在離後門較遠的第一排或左側）
         const occupiedIndices = new Set();
         while (occupiedIndices.size < preOccupiedCount) {
-            const r = Math.floor(Math.random() * state.rows);
-            const c = Math.floor(Math.random() * state.cols);
+            const r = Math.floor(Math.random() * 2);
+            const c = Math.floor(Math.random() * 3);
             const key = `${r}-${c}`;
             if (!goldIndices.has(key)) occupiedIndices.add(key);
         }
 
-        const rowNames = ['第一排', '第二排', '第三排', '第四排'];
+        const rowNames = ['第一排', '第二排', '第三排'];
 
         for (let r = 0; r < state.rows; r++) {
             const rowDiv = document.createElement('div');
@@ -1044,7 +1046,7 @@
 
             const badge = document.createElement('span');
             badge.className = 'row-badge';
-            badge.textContent = rowNames[r] || `第${r + 1}排`;
+            badge.textContent = rowNames[r];
             rowDiv.appendChild(badge);
 
             for (let c = 0; c < state.cols; c++) {
@@ -1052,10 +1054,10 @@
                 const isGold = goldIndices.has(key);
                 const occupied = occupiedIndices.has(key);
 
-                // r=0 為最靠近講台的第一排（離後門最遠，分數最高）
-                const distanceRank = (state.rows - 1) - r;
-                let baseScore = 100 + distanceRank * 65 + (c === 0 || c === state.cols - 1 ? 20 : 0);
-                if (isGold) baseScore = Math.round(baseScore * 1.5);
+                // r=0 為最靠近講台的第一排（離後門最遠，分數最高）；r=2 為離後門最近的第三排
+                const distanceRank = state.rows - r; // 3, 2, 1
+                let baseScore = 80 + distanceRank * 60 + (c === 0 ? 25 : 0);
+                if (isGold) baseScore = Math.round(baseScore * 1.4);
 
                 const deskEl = document.createElement('div');
                 deskEl.className = 'desk' + (isGold ? ' gold-seat' : '') + (occupied ? ' occupied' : '');
@@ -1109,13 +1111,22 @@
 
     function buildQueue(count) {
         state.queue = [];
+        // 確保三種核心速度學生均衡出現，讓玩家能體驗排位策略
+        const basePool = ['sprinter', 'normal', 'slow'];
         for (let i = 0; i < count; i++) {
-            const template = STUDENT_TYPES[Math.floor(Math.random() * STUDENT_TYPES.length)];
+            let template;
+            if (i < basePool.length) {
+                template = STUDENT_TYPES.find(t => t.type === basePool[i]);
+            } else {
+                template = STUDENT_TYPES[Math.floor(Math.random() * STUDENT_TYPES.length)];
+            }
             state.queue.push({
                 id: 'stu_' + i + '_' + Math.random().toString(36).slice(2, 6),
                 ...template
             });
         }
+        // 洗牌增加隨機樂趣
+        state.queue.sort(() => Math.random() - 0.5);
         state.selectedQueueId = state.queue.length > 0 ? state.queue[0].id : null;
         renderQueue();
     }
@@ -1129,8 +1140,8 @@
             card.className = 'queue-card' + (stu.id === state.selectedQueueId ? ' selected' : '');
             card.innerHTML = `
                 <div class="q-avatar-wrap">
-                    <span class="q-emoji">${stu.emoji}</span>
-                    <span class="q-shadow"></span>
+                    <div class="q-emoji">${stu.emoji}</div>
+                    <div class="q-shadow"></div>
                 </div>
                 <div class="q-name">${stu.name}</div>
                 <div class="q-trait">${stu.trait}</div>
@@ -1143,7 +1154,7 @@
         });
     }
 
-    // ==================== 玩家互動邏輯 ====================
+    // ==================== 玩家互動與後門路徑設計 ====================
     function handleDeskClick(seat) {
         if (!state.running) return;
 
@@ -1171,7 +1182,7 @@
             return;
         }
 
-        // 情況 C：派發走廊選中的學生從後門溜進去
+        // 情況 C：派發門外選中的學生從後門溜進該座位
         if (state.queue.length === 0) return;
 
         let stuIdx = state.queue.findIndex(s => s.id === state.selectedQueueId);
@@ -1183,29 +1194,29 @@
 
         seat.reserved = true;
         renderDesk(seat);
-        dispatchStudent(student, seat);
+        dispatchStudentFromBackDoor(student, seat);
     }
 
-    function dispatchStudent(student, targetSeat) {
+    function dispatchStudentFromBackDoor(student, targetSeat) {
         const stageRect = stageWrapper.getBoundingClientRect();
         const doorRect = backDoorGap.getBoundingClientRect();
         const deskRect = targetSeat.el.getBoundingClientRect();
 
-        // 1. 起點：教室外走廊（後門正下方外面一點）
-        const doorCenterX = (doorRect.left - stageRect.left) + doorRect.width / 2;
-        const doorY = (doorRect.top - stageRect.top) + doorRect.height / 2;
-        const startX = doorCenterX;
-        const startY = doorY + 26;
+        // 起點：教室外走廊（後門正下方 26px，在門外不會被老師抓包）
+        const doorX = (doorRect.left - stageRect.left) + doorRect.width / 2;
+        const doorThresholdY = (doorRect.top - stageRect.top) + doorRect.height / 2;
+        const startX = doorX;
+        const startY = doorThresholdY + 26;
 
-        // 2. 目標座位中心座標（相對於 stageWrapper）
+        // 終點：目標座位中心（相對於 stageWrapper）
         const targetX = (deskRect.left - stageRect.left) + deskRect.width / 2;
         const targetY = (deskRect.top - stageRect.top) + deskRect.height / 2;
 
-        // 路徑規劃：先從走廊穿過後門門檻 -> 垂直往前走到目標排數 -> 橫向切入座位
+        // 建立路徑點：1. 踏入後門門檻 -> 2. 沿走道前進至該排高度 -> 3. 橫移入座
         const waypoints = [
-            { x: doorCenterX, y: doorY - 12 }, // 跨進後門門檻
-            { x: doorCenterX, y: targetY },    // 沿著右側走道往前潛行
-            { x: targetX,     y: targetY }     // 橫向溜進目標座位
+            { x: doorX, y: doorThresholdY - 12 },
+            { x: doorX, y: targetY },
+            { x: targetX, y: targetY }
         ];
 
         const el = document.createElement('div');
@@ -1219,7 +1230,7 @@
             ...student,
             x: startX,
             y: startY,
-            doorLineY: doorY, // 跨過此 Y 座標才算正式進入教室範圍
+            doorThresholdY,
             waypoints,
             wpIndex: 0,
             targetSeat,
@@ -1230,7 +1241,7 @@
         });
     }
 
-    // ==================== 老師 AI 與特殊事件 ====================
+    // ==================== 老師 AI 行為（慢速移動＋講課停頓） ====================
     function triggerDistraction(msg, duration) {
         state.teacherState = 'distracted';
         state.teacherTimer = duration;
@@ -1282,7 +1293,7 @@
             return;
         }
 
-        // 2. 老師移動與狀態機
+        // 2. 老師講課踱步、停頓與轉頭狀態機
         updateTeacher(dt);
 
         // 3. 隨機特殊事件倒數
@@ -1303,7 +1314,7 @@
     }
 
     function updateTeacher(dt) {
-        // 講課時慢速踱步 + 偶爾停下來寫黑板/講解（更像真實老師上課）
+        // 講台緩慢走動＋自然停頓（像老師邊走邊寫黑板、停下來講解）
         if (state.teacherState === 'teaching') {
             if (state.teacherPauseTimer > 0) {
                 state.teacherPauseTimer -= dt;
@@ -1312,17 +1323,23 @@
                     updateTeacherVisuals();
                 }
             } else {
-                const walkSpeed = 6.5 + state.level * 0.8; // 放慢移動速度
+                // 緩慢步伐 (約 7~10% / 秒)
+                const walkSpeed = 7.5 + state.level * 0.8;
                 state.teacherX += state.teacherDir * walkSpeed * dt;
-                if (state.teacherX > 80) { state.teacherX = 80; state.teacherDir = -1; }
-                if (state.teacherX < 20) { state.teacherX = 20; state.teacherDir = 1; }
+
+                if (state.teacherX > 80) {
+                    state.teacherX = 80;
+                    state.teacherDir = -1;
+                } else if (state.teacherX < 20) {
+                    state.teacherX = 20;
+                    state.teacherDir = 1;
+                }
                 teacherEntity.style.left = `${state.teacherX}%`;
 
-                // 隨機停下來寫黑板或看教材 1.2~2.2 秒
-                if (Math.random() < 0.012) {
-                    state.teacherPauseTimer = 1.2 + Math.random() * 1.0;
-                    const actions = ['✍️ 寫黑板中', '📖 看課本講解', '📐 畫重點中'];
-                    state.teacherActionText = actions[Math.floor(Math.random() * actions.length)];
+                // 走一段路後自然停頓下來寫黑板或講重點
+                if (Math.random() < 0.014) {
+                    state.teacherPauseTimer = 1.1 + Math.random() * 1.1;
+                    state.teacherActionText = TEACH_ACTIONS[Math.floor(Math.random() * TEACH_ACTIONS.length)];
                     updateTeacherVisuals();
                 }
             }
@@ -1331,14 +1348,14 @@
         state.teacherTimer -= dt;
         if (state.teacherTimer > 0) return;
 
-        // 狀態轉換（隨關卡提升速度變快，Lv.1 預警空檔約 1.45 秒，精準對應三排距離）
-        const speedFactor = Math.max(0.55, 1 - (state.level - 1) * 0.06);
+        // 狀態轉換（隨關卡提升速度變快，Lv.1 預警空檔約 1.75 秒，精準對應三排距離）
+        const speedFactor = Math.max(0.6, 1 - (state.level - 1) * 0.05);
 
         if (state.teacherState === 'teaching') {
             // Level 2 以上有 22% 機率出現「假動作虛晃一招」
             const isFake = state.level >= 2 && Math.random() < 0.22;
             state.teacherState = isFake ? 'fakeout' : 'warning';
-            state.teacherTimer = Math.max(0.75, 1.45 * speedFactor);
+            state.teacherTimer = Math.max(0.95, 1.75 * speedFactor);
             updateTeacherVisuals();
         } else if (state.teacherState === 'fakeout') {
             state.teacherState = 'teaching';
@@ -1346,19 +1363,19 @@
             state.teacherPauseTimer = 1.0;
             state.teacherActionText = '✍️ 繼續板書';
             updateTeacherVisuals();
-            setBanner('虛驚一場！老師只是拿板擦擦黑板～', '');
+            setBanner('虛驚一場！老師只是轉頭拿板擦～', '');
         } else if (state.teacherState === 'warning') {
             state.teacherState = 'watching';
-            state.teacherTimer = Math.max(1.15, 1.75 * speedFactor);
+            state.teacherTimer = Math.max(1.15, 1.65 * speedFactor);
             updateTeacherVisuals();
-            setBanner('⚠️ 老師轉頭看台下了！教室內千萬別動！', 'warning-event');
+            setBanner('⚠️ 老師正在看台下！教室內走動會被抓包！', 'warning-event');
         } else if (state.teacherState === 'watching' || state.teacherState === 'distracted') {
             state.teacherState = 'teaching';
-            state.teacherTimer = Math.max(2.0, 3.2 * speedFactor);
-            state.teacherPauseTimer = 1.2;
-            state.teacherActionText = '✍️ 寫黑板中';
+            state.teacherTimer = Math.max(2.0, 3.1 * speedFactor);
+            state.teacherPauseTimer = 1.1;
+            state.teacherActionText = TEACH_ACTIONS[Math.floor(Math.random() * TEACH_ACTIONS.length)];
             updateTeacherVisuals();
-            setBanner('老師轉回去寫黑板了，快派人從後門溜進去！', '');
+            setBanner('老師轉回去寫黑板了，快趁現在從後門溜進去！', '');
         }
     }
 
@@ -1366,9 +1383,9 @@
         for (let i = state.movingStudents.length - 1; i >= 0; i--) {
             const stu = state.movingStudents[i];
 
-            // 判斷學生是否已跨過後門進入教室內
-            const isInsideClassroom = stu.y < stu.doorLineY;
-            stu.el.classList.toggle('outside', !isInsideClassroom);
+            // 判斷是否還在教室外面（走廊安全區）
+            const isOutsideClassroom = stu.y > stu.doorThresholdY - 2;
+            stu.el.classList.toggle('outside', isOutsideClassroom);
 
             // 罰站暈眩中
             if (stu.stunTimer > 0) {
@@ -1379,24 +1396,24 @@
                 continue;
             }
 
-            // 只有在「教室內」且老師正在「盯梢中」才會被抓包（在門外走廊不會被抓！）
-            if (isInsideClassroom && state.teacherState === 'watching') {
+            // 只有在「已踏入教室內」且「老師正在盯梢」時才會被抓包
+            if (!isOutsideClassroom && state.teacherState === 'watching') {
                 handleStudentCaught(stu);
                 continue;
             }
 
-            // 膽小型：在教室內看到老師預警會原地猶豫頓住
-            if (isInsideClassroom && stu.timid && (state.teacherState === 'warning' || state.teacherState === 'fakeout')) {
+            // 膽小型：老師出現預警時若在教室內會原地猶豫頓住
+            if (!isOutsideClassroom && stu.timid && (state.teacherState === 'warning' || state.teacherState === 'fakeout')) {
                 stu.el.classList.add('paused');
                 continue;
             } else {
                 stu.el.classList.remove('paused');
             }
 
-            // 低頭族：在教室內走到一半偶爾滑手機停頓 0.55 秒
-            if (isInsideClassroom && stu.phone && !stu.hasCheckedPhone && Math.random() < 0.015) {
+            // 低頭族：在走道上偶爾滑手機停頓 0.45 秒
+            if (!isOutsideClassroom && stu.phone && !stu.hasCheckedPhone && stu.wpIndex >= 1 && Math.random() < 0.015) {
                 stu.hasCheckedPhone = true;
-                stu.phoneTimer = 0.55;
+                stu.phoneTimer = 0.45;
                 spawnFloatText(stu.el, '📱回個訊息...', 'var(--warning)');
             }
             if (stu.phoneTimer > 0) {
@@ -1405,7 +1422,7 @@
                 continue;
             }
 
-            // 沿著路徑點移動（走廊 -> 後門 -> 走道 -> 目標座位）
+            // 依序沿著路徑點移動（走廊 -> 進後門 -> 走道 -> 入座）
             const wp = stu.waypoints[stu.wpIndex];
             const dx = wp.x - stu.x;
             const dy = wp.y - stu.y;
@@ -1437,8 +1454,8 @@
         state.levelScore = Math.max(0, state.levelScore - penalty);
         state.totalScore = Math.max(0, state.totalScore - penalty);
 
-        // 原地罰站 1.4 秒
-        stu.stunTimer = 1.4;
+        // 原地罰站 1.35 秒
+        stu.stunTimer = 1.35;
         stu.el.classList.add('caught');
         spawnFloatText(stu.el, `抓包！-${penalty}`, 'var(--danger)');
     }
@@ -1452,26 +1469,27 @@
         seat.studentEmoji = stu.emoji;
         renderDesk(seat);
 
-        const gained = Math.round(seat.score * (1 + (state.combo - 1) * 0.25));
-        let speedBonus = 0;
+        // 基礎連擊得分
+        let gained = Math.round(seat.score * (1 + (state.combo - 1) * 0.25));
 
-        // 較慢的學生成功安排在前排座位（row 0 為第一排，row 1 為第二排）給予額外膽識加分
+        // 較慢學生成功入座前排（第一排 row=0 或第二排 row=1）的額外膽識加分
+        let challengeBonus = 0;
         if (stu.type === 'slow') {
-            if (seat.row === 0) speedBonus = 180;      // 龜速成功進第一排（超高難度）
-            else if (seat.row === 1) speedBonus = 90;  // 龜速成功進第二排
+            if (seat.row === 0) challengeBonus = 180;
+            else if (seat.row === 1) challengeBonus = 90;
         } else if ((stu.type === 'normal' || stu.type === 'timid') && seat.row === 0) {
-            speedBonus = 80;                           // 普通/膽小學生成功進第一排
+            challengeBonus = 80;
         }
 
-        const totalGained = gained + speedBonus;
-        state.levelScore += totalGained;
-        state.totalScore += totalGained;
+        gained += challengeBonus;
+        state.levelScore += gained;
+        state.totalScore += gained;
         state.combo++;
 
-        if (speedBonus > 0) {
-            spawnFloatText(seat.el, `+${totalGained} (膽識+${speedBonus}!)`, 'var(--warning)');
+        if (challengeBonus > 0) {
+            spawnFloatText(seat.el, `+${gained} (前排加分+${challengeBonus}!)`, 'var(--warning)');
         } else {
-            spawnFloatText(seat.el, `+${totalGained}`, 'var(--success)');
+            spawnFloatText(seat.el, `+${gained}`, 'var(--success)');
         }
 
         // 檢查是否全部坐滿
@@ -1506,7 +1524,7 @@
 
         let badge = '遲到慣犯';
         if (cleared && state.caughtCount === 0 && state.timeLeft >= 8) {
-            badge = '🥷 零抓包神速影武者';
+            badge = '🥷 後門神速影武者';
         } else if (cleared && state.caughtCount === 0) {
             badge = '🤫 零抓包潛行大師';
         } else if (cleared && state.timeLeft < 3) {
@@ -1528,7 +1546,7 @@
         const nextBtn = document.getElementById('nextBtn');
 
         if (cleared) {
-            descEl.textContent = `全班順利就坐！獲得剩餘時間獎勵 +${timeBonus} 分，下一關老師轉頭會更快喔！`;
+            descEl.textContent = `全班順利從後門潛入就坐！獲得剩餘時間獎勵 +${timeBonus} 分，下一關老師會更警覺喔！`;
             nextBtn.textContent = `挑戰第 ${state.level + 1} 關 ➡️`;
             nextBtn.onclick = () => {
                 document.getElementById('resultModal').classList.add('hidden');
