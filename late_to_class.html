@@ -11,15 +11,14 @@
             --text-main: #1e293b;
             --text-sub: #64748b;
             --border-color: #cbd5e1;
-            --wall-color: #475569;
-            --hallway-bg: #dbe4ee;
-            --hallway-tile: rgba(255, 255, 255, 0.45);
+            --hallway-bg: #e2e8f0;
             --classroom-bg: #fffbeb;
             --desk-empty: #fef3c7;
             --desk-border: #d97706;
             --desk-gold: #fde047;
             --desk-occupied: #dcfce7;
             --desk-occupied-border: #16a34a;
+            --podium-bg: #78350f;
             --board-bg: #14532d;
             --accent: #3b82f6;
             --accent-hover: #2563eb;
@@ -35,15 +34,14 @@
             --text-main: #f1f5f9;
             --text-sub: #94a3b8;
             --border-color: #334155;
-            --wall-color: #64748b;
             --hallway-bg: #0b1120;
-            --hallway-tile: rgba(255, 255, 255, 0.04);
             --classroom-bg: #172033;
             --desk-empty: #273549;
             --desk-border: #64748b;
             --desk-gold: #423815;
             --desk-occupied: #143626;
             --desk-occupied-border: #22c55e;
+            --podium-bg: #451a03;
             --board-bg: #064e3b;
             --accent: #60a5fa;
             --accent-hover: #3b82f6;
@@ -208,7 +206,7 @@
             flex-direction: column;
         }
 
-        /* 前方黑板與講台區 */
+        /* 黑板與講台區 */
         .front-zone {
             background: var(--classroom-bg);
             border-bottom: 2px dashed var(--border-color);
@@ -221,24 +219,24 @@
         }
 
         .blackboard {
-            width: 74%;
-            height: 28px;
+            width: 72%;
+            height: 26px;
             background: var(--board-bg);
             border: 3px solid #92400e;
             border-radius: 4px;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 0.74rem;
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
             font-weight: 600;
         }
 
-        /* 老師角色與講課狀態 */
+        /* 老師角色與視線 */
         .teacher-entity {
             position: absolute;
-            bottom: 8px;
+            bottom: 6px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -248,7 +246,7 @@
         }
 
         .teacher-signal {
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             font-weight: 900;
             height: 22px;
             line-height: 22px;
@@ -256,26 +254,22 @@
             border-radius: 10px;
             margin-bottom: 2px;
             white-space: nowrap;
-            transition: background 0.15s, color 0.15s;
         }
 
         .signal-teach {
-            background: rgba(100, 116, 139, 0.22);
-            color: var(--text-main);
-            font-weight: 700;
+            background: rgba(59, 130, 246, 0.16);
+            color: var(--accent);
         }
 
         .signal-warn {
             background: var(--warning);
             color: #000;
-            font-size: 0.95rem;
-            animation: pulse 0.32s infinite alternate;
+            animation: pulse 0.35s infinite alternate;
         }
 
         .signal-watch {
             background: var(--danger);
             color: #fff;
-            font-size: 0.95rem;
         }
 
         .signal-distract {
@@ -283,9 +277,14 @@
             color: #fff;
         }
 
+        .signal-question {
+            background: var(--warning);
+            color: #000;
+        }
+
         @keyframes pulse {
-            from { transform: scale(0.95); }
-            to { transform: scale(1.12); }
+            from { transform: scale(0.96); }
+            to { transform: scale(1.08); }
         }
 
         .teacher-avatar {
@@ -297,7 +296,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.45rem;
+            font-size: 1.5rem;
             box-shadow: 0 3px 8px rgba(0,0,0,0.25);
             position: relative;
         }
@@ -325,12 +324,16 @@
             opacity: 1;
         }
 
+        .vision-cone.question-mode {
+            background: radial-gradient(circle at var(--tx, 50%) var(--ty, 35%), rgba(245, 158, 11, 0.34) 0%, rgba(239, 68, 68, 0.2) 55%, transparent 82%);
+        }
+
         /* 教室座位區 */
         .classroom-arena {
             background: var(--classroom-bg);
-            padding: 12px 12px 16px;
+            padding: 14px 12px 26px;
             position: relative;
-            height: 274px;
+            min-height: 274px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -340,27 +343,17 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
+            margin-bottom: 10px;
             position: relative;
             z-index: 5;
         }
 
-        .row-badge {
-            position: absolute;
-            left: -6px;
-            top: -8px;
-            font-size: 0.6rem;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-sub);
-            padding: 0 4px;
-            border-radius: 4px;
-            font-weight: 700;
-            z-index: 6;
-            pointer-events: none;
+        .row-container:last-child {
+            margin-bottom: 0;
         }
 
         .desk {
-            height: 56px;
+            height: 54px;
             background: var(--desk-empty);
             border: 2px solid var(--desk-border);
             border-radius: 10px;
@@ -426,72 +419,20 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        /* 教室與走廊之間的隔牆與後門 */
-        .classroom-wall-divider {
-            height: 18px;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            position: relative;
-            z-index: 14;
-            background: var(--classroom-bg);
-        }
-
-        .wall-segment {
-            height: 10px;
-            background: var(--wall-color);
-            border-radius: 2px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .wall-left {
-            width: 68%;
-        }
-
-        .wall-right {
-            width: 10%;
-        }
-
-        .back-door-gap {
-            width: 22%;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            border-left: 3px solid var(--wall-color);
-            border-right: 3px solid var(--wall-color);
-            background: repeating-linear-gradient(
-                -45deg,
-                rgba(59, 130, 246, 0.14),
-                rgba(59, 130, 246, 0.14) 5px,
-                transparent 5px,
-                transparent 10px
-            );
-        }
-
-        .door-leaf {
+        /* 教室後門牆壁標示 */
+        .back-wall-door {
             position: absolute;
-            left: -2px;
-            bottom: 2px;
-            width: 26px;
-            height: 5px;
-            background: #b45309;
-            border-radius: 2px;
-            transform-origin: left center;
-            transform: rotate(-38deg);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        }
-
-        .door-label {
-            font-size: 0.66rem;
-            font-weight: 900;
-            color: var(--accent);
+            bottom: 0;
+            right: 18px;
             background: var(--card-bg);
-            padding: 0 5px;
-            border-radius: 6px;
-            border: 1px solid var(--accent);
-            white-space: nowrap;
+            border: 2px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            padding: 1px 10px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: var(--text-sub);
+            z-index: 6;
         }
 
         /* 移動中的學生 */
@@ -507,16 +448,10 @@
             align-items: center;
             justify-content: center;
             font-size: 1.2rem;
-            z-index: 16;
+            z-index: 12;
             transform: translate(-50%, -50%);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
             pointer-events: none;
-            transition: border-color 0.15s, opacity 0.15s;
-        }
-
-        .moving-student.outside {
-            opacity: 0.92;
-            border-style: dashed;
         }
 
         .moving-student.paused {
@@ -547,26 +482,25 @@
             75% { transform: translate(-45%, -50%) rotate(8deg); }
         }
 
-        /* 門外安全走廊區（磁磚質感） */
+        /* 門外走廊等候區 */
         .hallway-zone {
-            background-color: var(--hallway-bg);
-            background-image:
-                linear-gradient(90deg, var(--hallway-tile) 1px, transparent 1px),
-                linear-gradient(var(--hallway-tile) 1px, transparent 1px);
-            background-size: 24px 24px;
+            background: var(--hallway-bg);
+            background-image: linear-gradient(90deg, rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+                              linear-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-top: 3px solid var(--border-color);
             padding: 8px 12px 10px;
-            min-height: 98px;
+            min-height: 86px;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            position: relative;
         }
 
         .hallway-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.74rem;
+            font-size: 0.75rem;
             font-weight: 700;
             color: var(--text-sub);
         }
@@ -575,98 +509,59 @@
             display: flex;
             gap: 8px;
             overflow-x: auto;
-            padding: 2px 2px 4px;
-            align-items: flex-end;
+            padding-bottom: 2px;
         }
 
-        /* 門外排隊學生卡片（具站姿與腳下陰影） */
         .queue-card {
             flex: 0 0 auto;
-            min-width: 82px;
+            min-width: 78px;
             background: var(--card-bg);
             border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 5px 8px 6px;
+            border-radius: 10px;
+            padding: 4px 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
             cursor: pointer;
-            position: relative;
             transition: all 0.15s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-        }
-
-        .queue-card:hover {
-            transform: translateY(-2px);
         }
 
         .queue-card.selected {
             border-color: var(--accent);
-            background: rgba(59, 130, 246, 0.14);
-            transform: translateY(-4px);
-            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.28);
-        }
-
-        .queue-card.selected::after {
-            content: '準備潛入 ▲';
-            position: absolute;
-            top: -9px;
-            font-size: 0.58rem;
-            background: var(--accent);
-            color: #fff;
-            padding: 0 5px;
-            border-radius: 6px;
-            font-weight: 800;
-        }
-
-        .q-avatar-wrap {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 2px;
+            background: rgba(59, 130, 246, 0.12);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
         }
 
         .q-emoji {
-            font-size: 1.35rem;
-            z-index: 2;
-        }
-
-        .q-shadow {
-            position: absolute;
-            bottom: 0;
-            width: 22px;
-            height: 5px;
-            background: rgba(0, 0, 0, 0.22);
-            border-radius: 50%;
-            z-index: 1;
+            font-size: 1.25rem;
         }
 
         .q-name {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: 800;
         }
 
         .q-trait {
             font-size: 0.62rem;
             color: var(--text-sub);
-            font-weight: 600;
         }
 
         /* 浮動得分文字 */
         .float-text {
             position: absolute;
             font-weight: 900;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             pointer-events: none;
             z-index: 30;
             animation: floatUp 0.95s ease-out forwards;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+            white-space: nowrap;
         }
 
         @keyframes floatUp {
-            0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
-            100% { opacity: 0; transform: translate(-50%, -32px) scale(1.1); }
+            0% { opacity: 1; transform: translate(-50%, 0) scale(0.92); }
+            100% { opacity: 0; transform: translate(-50%, -32px) scale(1.08); }
         }
 
         /* 彈窗遮罩 */
@@ -690,7 +585,7 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 16px;
-            max-width: 450px;
+            max-width: 440px;
             width: 100%;
             padding: 20px;
             box-shadow: 0 12px 32px rgba(0,0,0,0.35);
@@ -704,7 +599,7 @@
 
         .rule-list {
             text-align: left;
-            font-size: 0.85rem;
+            font-size: 0.86rem;
             line-height: 1.55;
             color: var(--text-main);
             background: var(--bg-color);
@@ -722,15 +617,16 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px;
-            margin-top: 8px;
+            margin-bottom: 16px;
             font-size: 0.78rem;
         }
 
         .trait-item {
-            background: var(--card-bg);
+            background: var(--bg-color);
             padding: 6px 8px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
+            text-align: left;
         }
 
         .btn-primary {
@@ -819,7 +715,7 @@
 
 <!-- 動態事件提示 -->
 <div class="event-banner" id="eventBanner">
-    <span id="eventText">準備開始！從後門溜進教室入座吧</span>
+    <span id="eventText">學生在門外走廊等候，趁空檔從後門溜進座位！</span>
     <span id="comboText" style="color: var(--warning);">Combo x1</span>
 </div>
 
@@ -829,34 +725,23 @@
     <div class="front-zone">
         <div class="blackboard">今日課程：微積分與時間管理</div>
         <div class="teacher-entity" id="teacherEntity">
-            <div class="teacher-signal" id="teacherSignal"></div>
+            <div class="teacher-signal" id="teacherSignal">✍️ 寫黑板中</div>
             <div class="teacher-avatar" id="teacherAvatar">👨‍🏫</div>
         </div>
     </div>
 
-    <!-- 老師視線扇形區 -->
+    <!-- 老師視線光束 -->
     <div class="vision-cone" id="visionCone"></div>
 
-    <!-- 教室座位區 -->
-    <div class="classroom-arena" id="classroomArena">
-        <!-- 由 JS 動態生成 3 排座位 -->
-    </div>
+    <!-- 教室座位區（第 1 排最靠近講台，第 3 排最靠近後門） -->
+    <div class="classroom-arena" id="classroomArena"></div>
+    <div class="back-wall-door">🚪 後門入口</div>
 
-    <!-- 教室後牆與後門入口 -->
-    <div class="classroom-wall-divider">
-        <div class="wall-segment wall-left"></div>
-        <div class="back-door-gap" id="backDoorGap">
-            <div class="door-leaf"></div>
-            <span class="door-label">🚪 後門</span>
-        </div>
-        <div class="wall-segment wall-right"></div>
-    </div>
-
-    <!-- 門外安全走廊 -->
+    <!-- 門外走廊等候區 -->
     <div class="hallway-zone">
         <div class="hallway-header">
-            <span>🧱 教室外走廊（在門外躲避不會被抓包）</span>
-            <span id="queueCountText">走廊等候：0 人</span>
+            <span>🚶 走廊等候區（教室外安全，準備從後門溜入）</span>
+            <span id="queueCountText">等候中：0 人</span>
         </div>
         <div class="queue-list" id="queueList"></div>
     </div>
@@ -867,21 +752,21 @@
     <div class="modal-card">
         <h2>🏫 遲到大作戰</h2>
         <p style="font-size: 0.88rem; color: var(--text-sub); margin-bottom: 12px;">
-            上課鐘響了！快從<strong>後門</strong>溜進教室，在點名前把座位全坐滿！
+            上課鐘響了！學生在走廊排隊，抓準時機從後門溜進教室坐滿座位！
         </p>
         <ul class="rule-list">
-            <li><strong>潛行路線</strong>：所有學生都從右後方<strong>🚪後門</strong>溜進教室。越靠近講台的<strong>第一排</strong>分數越高，但路途最遠！</li>
-            <li><strong>抓準預警空檔</strong>：老師頭上冒出 <strong>❗</strong> 準備轉頭時，趁這段空檔快讓學生溜進教室！</li>
-            <li><strong>高難度加分</strong>：若成功把<strong>較慢的學生</strong>護送到前排座位（第一、二排），還能獲得額外<strong>膽識加分</strong>！</li>
-            <li><strong>製造混亂</strong>：點擊<strong>已就座的學生</strong>可讓他舉手發問（每局限用 2 次），瞬間吸引老師注意力！</li>
+            <li><strong>操作方式</strong>：點選走廊學生（預設自動選第一位），再點選<strong>空座位</strong>就會從後門溜進去。</li>
+            <li><strong>前排高分與膽識加分</strong>：越靠近講台（第 1 排）與⭐黃金位分數越高；<strong>較慢的學生坐到前排還有額外加分</strong>！</li>
+            <li><strong>小心轉頭</strong>：老師出現 <strong>❗ 準備轉頭</strong> 後會轉頭看台下，在教室內走動會<strong>扣分並罰站</strong>。</li>
+            <li><strong>舉手發問</strong>：點擊<strong>已入座學生</strong>可讓他舉手發問（每局限用 2 次），老師會轉向該生並<strong>留意其左右兩側</strong>。</li>
         </ul>
-        <div class="trait-grid" style="margin-bottom: 16px; text-align: left;">
-            <div class="trait-item">🏃‍♂️ <strong>衝刺王</strong>：腳程極快，直線衝刺</div>
-            <div class="trait-item">🎒 <strong>普通生</strong>：步伐穩健，速度適中</div>
-            <div class="trait-item">🐢 <strong>慢吞吞</strong>：龜速前進，進前排加分</div>
-            <div class="trait-item">😰📱 <strong>特殊性格</strong>：會猶豫或滑手機停頓</div>
+        <div class="trait-grid">
+            <div class="trait-item">🏃‍♂️ <strong>衝刺王</strong>：極速衝刺</div>
+            <div class="trait-item">🐢 <strong>慢吞吞</strong>：龜速前進</div>
+            <div class="trait-item">😰 <strong>膽小鬼</strong>：預警時會頓住</div>
+            <div class="trait-item">📱 <strong>低頭族</strong>：偶爾滑手機</div>
         </div>
-        <button class="btn-primary" id="startBtn">從後門溜進去！</button>
+        <button class="btn-primary" id="startBtn">開始上課！</button>
     </div>
 </div>
 
@@ -903,7 +788,7 @@
 
 <script>
 (() => {
-    // ==================== 主題切換 (深色模式相容) ====================
+    // ==================== 主題切換 (深色模式優先相容) ====================
     const themeToggle = document.getElementById('themeToggle');
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -917,17 +802,13 @@
         themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
     });
 
-    // ==================== 學生類型與精準速度設計 ====================
-    // 預警轉頭空檔預設約 1.75 秒，對應三排距離：
-    // 衝刺王 (360 px/s) -> 1.75秒內可達最遠的第一排
-    // 普通生 (245 px/s) -> 1.75秒內可穩健抵達第二排
-    // 慢吞吞 (155 px/s) -> 1.75秒內剛好溜進最近的第三排
+    // ==================== 學生特性與隨機事件設定 ====================
     const STUDENT_TYPES = [
-        { type: 'sprinter', emoji: '🏃‍♂️', name: '衝刺王', trait: '極速衝刺', speed: 360, timid: false, phone: false },
-        { type: 'normal',   emoji: '🎒', name: '普通生', trait: '步伐穩健', speed: 245, timid: false, phone: false },
+        { type: 'sprinter', emoji: '🏃‍♂️', name: '衝刺王', trait: '極速衝刺', speed: 365, timid: false, phone: false },
         { type: 'slow',     emoji: '🐢', name: '慢吞吞', trait: '龜速前進', speed: 155, timid: false, phone: false },
-        { type: 'timid',    emoji: '😰', name: '膽小鬼', trait: '預警會頓住', speed: 260, timid: true,  phone: false },
-        { type: 'phone',    emoji: '📱', name: '低頭族', trait: '偶爾滑手機', speed: 270, timid: false, phone: true  }
+        { type: 'timid',    emoji: '😰', name: '膽小鬼', trait: '預警會頓住', speed: 245, timid: true,  phone: false },
+        { type: 'phone',    emoji: '📱', name: '低頭族', trait: '偶爾滑手機', speed: 245, timid: false, phone: true  },
+        { type: 'normal',   emoji: '🎒', name: '普通生', trait: '步伐穩健', speed: 250, timid: false, phone: false }
     ];
 
     const RANDOM_EVENTS = [
@@ -936,8 +817,6 @@
         { text: '🐦 窗外飛來一隻大鳥！老師看窗外 (3.5秒)', duration: 3.5 },
         { text: '💻 投影機突然閃爍！老師忙著調整 (4秒)', duration: 4.0 }
     ];
-
-    const TEACH_ACTIONS = ['✍️ 寫黑板中', '📖 講解課文', '📐 畫重點中', '🗣️ 轉身板書'];
 
     // ==================== 狀態變數 ====================
     let bestScore = parseInt(localStorage.getItem('best_late_class') || '0', 10);
@@ -958,21 +837,21 @@
         selectedQueueId: null,
         movingStudents: [],
         distractCharges: 2,
-        // 老師狀態機: 'teaching' | 'warning' | 'fakeout' | 'watching' | 'distracted'
+        // 老師狀態機: 'teaching' | 'warning' | 'fakeout' | 'watching' | 'distracted' | 'question'
         teacherState: 'teaching',
-        teacherTimer: 2.5,
+        teacherTimer: 2.6,
         teacherX: 50,
         teacherDir: 1,
         teacherPauseTimer: 0,
         teacherActionText: '✍️ 寫黑板中',
-        eventCooldown: 8,
+        questionFocus: null,
+        eventCooldown: 7.5,
         lastTimestamp: 0
     };
 
     // DOM 元素
     const stageWrapper = document.getElementById('stageWrapper');
     const classroomArena = document.getElementById('classroomArena');
-    const backDoorGap = document.getElementById('backDoorGap');
     const queueListEl = document.getElementById('queueList');
     const teacherEntity = document.getElementById('teacherEntity');
     const teacherAvatar = document.getElementById('teacherAvatar');
@@ -992,71 +871,65 @@
         state.movingStudents = [];
         state.distractCharges = 2;
 
-        // 固定維持 3 排 4 列 (共 12 席)，清楚對應第一排(最遠)、第二排(中間)、第三排(近後門)
         state.rows = 3;
         state.cols = 4;
         const totalSeats = state.rows * state.cols;
 
-        // 初始已有 2~3 位乖學生坐好
-        const preOccupiedCount = lvl === 1 ? 3 : 2;
+        // 一開始在教室的學生沒幾個
+        const preOccupiedCount = Math.min(3, Math.max(1, 4 - Math.floor(lvl / 2)));
         const neededStudents = totalSeats - preOccupiedCount;
 
-        // 時間隨人數與關卡動態調整
-        state.timeLeft = Math.max(24, neededStudents * 2.8 - (lvl - 1) * 1.0);
+        state.timeLeft = Math.max(24, 36 - (lvl - 1) * 1.5);
         state.teacherState = 'teaching';
-        state.teacherTimer = Math.max(2.4, 3.6 - lvl * 0.12);
+        state.teacherTimer = Math.max(2.0, 3.2 - lvl * 0.12);
         state.teacherX = 50;
+        state.teacherDir = 1;
         state.teacherPauseTimer = 1.2;
         state.teacherActionText = '✍️ 寫黑板中';
+        state.questionFocus = null;
         state.eventCooldown = 7 + Math.random() * 4;
 
         buildSeats(preOccupiedCount);
         buildQueue(neededStudents);
         updateTeacherVisuals();
         updateHUD();
-        setBanner('趁老師寫黑板或剛出現 ❗ 時，從後門溜進座位！', '');
+        setBanner('學生在門外走廊等候，趁空檔從後門溜進座位！', '');
     }
 
     function buildSeats(preOccupiedCount) {
         classroomArena.innerHTML = '';
         state.seats = [];
 
-        // 挑選黃金高分座位（偏向最遠的第一排與靠窗側）
+        // 黃金高分座位（row 0 最靠近講台，越前排分數越高）
         const goldIndices = new Set();
-        while (goldIndices.size < 3) {
-            const r = Math.random() < 0.65 ? 0 : 1;
+        while (goldIndices.size < 2) {
+            const r = Math.floor(Math.random() * 2);
             const c = Math.random() < 0.7 ? (Math.random() < 0.5 ? 0 : state.cols - 1) : Math.floor(Math.random() * state.cols);
             goldIndices.add(`${r}-${c}`);
         }
 
-        // 挑選預先就坐的座位（優先放在離後門較遠的第一排或左側）
+        // 預先就坐的學生
         const occupiedIndices = new Set();
         while (occupiedIndices.size < preOccupiedCount) {
-            const r = Math.floor(Math.random() * 2);
-            const c = Math.floor(Math.random() * 3);
+            const r = Math.floor(Math.random() * state.rows);
+            const c = Math.floor(Math.random() * state.cols);
             const key = `${r}-${c}`;
             if (!goldIndices.has(key)) occupiedIndices.add(key);
         }
 
-        const rowNames = ['第一排', '第二排', '第三排'];
-
         for (let r = 0; r < state.rows; r++) {
             const rowDiv = document.createElement('div');
             rowDiv.className = 'row-container';
-
-            const badge = document.createElement('span');
-            badge.className = 'row-badge';
-            badge.textContent = rowNames[r];
-            rowDiv.appendChild(badge);
 
             for (let c = 0; c < state.cols; c++) {
                 const key = `${r}-${c}`;
                 const isGold = goldIndices.has(key);
                 const occupied = occupiedIndices.has(key);
 
-                // r=0 為最靠近講台的第一排（離後門最遠，分數最高）；r=2 為離後門最近的第三排
-                const distanceRank = state.rows - r; // 3, 2, 1
-                let baseScore = 80 + distanceRank * 60 + (c === 0 ? 25 : 0);
+                // row 0 為第一排（離後門最遠、最靠近老師），分數最高
+                const frontBonus = (state.rows - 1 - r) * 65;
+                const edgeBonus = (c === 0 || c === state.cols - 1) ? 20 : 0;
+                let baseScore = 100 + frontBonus + edgeBonus;
                 if (isGold) baseScore = Math.round(baseScore * 1.4);
 
                 const deskEl = document.createElement('div');
@@ -1078,7 +951,6 @@
                 };
 
                 renderDesk(seatObj);
-
                 deskEl.addEventListener('click', () => handleDeskClick(seatObj));
                 rowDiv.appendChild(deskEl);
                 state.seats.push(seatObj);
@@ -1111,38 +983,26 @@
 
     function buildQueue(count) {
         state.queue = [];
-        // 確保三種核心速度學生均衡出現，讓玩家能體驗排位策略
-        const basePool = ['sprinter', 'normal', 'slow'];
         for (let i = 0; i < count; i++) {
-            let template;
-            if (i < basePool.length) {
-                template = STUDENT_TYPES.find(t => t.type === basePool[i]);
-            } else {
-                template = STUDENT_TYPES[Math.floor(Math.random() * STUDENT_TYPES.length)];
-            }
+            const template = STUDENT_TYPES[Math.floor(Math.random() * STUDENT_TYPES.length)];
             state.queue.push({
                 id: 'stu_' + i + '_' + Math.random().toString(36).slice(2, 6),
                 ...template
             });
         }
-        // 洗牌增加隨機樂趣
-        state.queue.sort(() => Math.random() - 0.5);
         state.selectedQueueId = state.queue.length > 0 ? state.queue[0].id : null;
         renderQueue();
     }
 
     function renderQueue() {
         queueListEl.innerHTML = '';
-        document.getElementById('queueCountText').textContent = `走廊等候：${state.queue.length} 人`;
+        document.getElementById('queueCountText').textContent = `等候中：${state.queue.length} 人`;
 
         state.queue.forEach(stu => {
             const card = document.createElement('div');
             card.className = 'queue-card' + (stu.id === state.selectedQueueId ? ' selected' : '');
             card.innerHTML = `
-                <div class="q-avatar-wrap">
-                    <div class="q-emoji">${stu.emoji}</div>
-                    <div class="q-shadow"></div>
-                </div>
+                <div class="q-emoji">${stu.emoji}</div>
                 <div class="q-name">${stu.name}</div>
                 <div class="q-trait">${stu.trait}</div>
             `;
@@ -1154,35 +1014,35 @@
         });
     }
 
-    // ==================== 玩家互動與後門路徑設計 ====================
+    // ==================== 玩家互動邏輯 ====================
     function handleDeskClick(seat) {
         if (!state.running) return;
 
-        // 情況 A：點擊已就座的學生 -> 觸發「舉手發問」吸引老師注意力
+        // 情況 A：點擊已就座學生 -> 觸發「舉手發問」，老師注意該生及左右兩側
         if (seat.occupied) {
             if (seat.distractUsed || state.distractCharges <= 0) {
                 spawnFloatText(seat.el, '次數已用完', 'var(--text-sub)');
                 return;
             }
-            if (state.teacherState === 'distracted') {
-                spawnFloatText(seat.el, '老師已經分心了！', 'var(--warning)');
+            if (state.teacherState === 'distracted' || state.teacherState === 'question') {
+                spawnFloatText(seat.el, '老師正在處理中！', 'var(--warning)');
                 return;
             }
             seat.distractUsed = true;
             state.distractCharges--;
             state.seats.forEach(renderDesk);
-            triggerDistraction('🙋 學生舉手問難題！老師走過去解答 (3.5秒)', 3.5);
+            triggerQuestionFocus(seat);
             spawnFloatText(seat.el, '🙋 老師請問這題...', 'var(--accent)');
             return;
         }
 
-        // 情況 B：座位已被其他人預約前往
+        // 情況 B：座位已被預約
         if (seat.reserved) {
             spawnFloatText(seat.el, '已有同學過去了！', 'var(--warning)');
             return;
         }
 
-        // 情況 C：派發門外選中的學生從後門溜進該座位
+        // 情況 C：派發門外學生從後門溜進教室
         if (state.queue.length === 0) return;
 
         let stuIdx = state.queue.findIndex(s => s.id === state.selectedQueueId);
@@ -1194,45 +1054,39 @@
 
         seat.reserved = true;
         renderDesk(seat);
-        dispatchStudentFromBackDoor(student, seat);
+        dispatchStudent(student, seat);
     }
 
-    function dispatchStudentFromBackDoor(student, targetSeat) {
-        const stageRect = stageWrapper.getBoundingClientRect();
-        const doorRect = backDoorGap.getBoundingClientRect();
+    function dispatchStudent(student, targetSeat) {
+        const arenaRect = classroomArena.getBoundingClientRect();
         const deskRect = targetSeat.el.getBoundingClientRect();
 
-        // 起點：教室外走廊（後門正下方 26px，在門外不會被老師抓包）
-        const doorX = (doorRect.left - stageRect.left) + doorRect.width / 2;
-        const doorThresholdY = (doorRect.top - stageRect.top) + doorRect.height / 2;
-        const startX = doorX;
-        const startY = doorThresholdY + 26;
+        // 從教室右下角「後門」溜進來，先往走廊走道切入再往前潛行
+        const doorX = arenaRect.width - 42;
+        const doorY = arenaRect.height + 14;
 
-        // 終點：目標座位中心（相對於 stageWrapper）
-        const targetX = (deskRect.left - stageRect.left) + deskRect.width / 2;
-        const targetY = (deskRect.top - stageRect.top) + deskRect.height / 2;
+        const targetX = (deskRect.left - arenaRect.left) + deskRect.width / 2;
+        const targetY = (deskRect.top - arenaRect.top) + deskRect.height / 2;
 
-        // 建立路徑點：1. 踏入後門門檻 -> 2. 沿走道前進至該排高度 -> 3. 橫移入座
-        const waypoints = [
-            { x: doorX, y: doorThresholdY - 12 },
-            { x: doorX, y: targetY },
-            { x: targetX, y: targetY }
-        ];
+        // 走道轉折點（靠近右側走道，再往前排移動）
+        const aisleX = arenaRect.width * 0.86;
+        const entryY = arenaRect.height - 14;
 
         const el = document.createElement('div');
-        el.className = 'moving-student outside';
+        el.className = 'moving-student';
         el.innerHTML = `${student.emoji}<span class="student-tag">${student.name}</span>`;
-        el.style.left = `${startX}px`;
-        el.style.top = `${startY}px`;
-        stageWrapper.appendChild(el);
+        el.style.left = `${doorX}px`;
+        el.style.top = `${doorY}px`;
+        classroomArena.appendChild(el);
 
         state.movingStudents.push({
             ...student,
-            x: startX,
-            y: startY,
-            doorThresholdY,
-            waypoints,
-            wpIndex: 0,
+            x: doorX,
+            y: doorY,
+            aisleX,
+            entryY,
+            targetX,
+            targetY,
             targetSeat,
             el,
             stunTimer: 0,
@@ -1241,17 +1095,59 @@
         });
     }
 
-    // ==================== 老師 AI 行為（慢速移動＋講課停頓） ====================
+    // ==================== 老師 AI 行為（慢速移動＋講課停頓＋舉手發問左右警戒） ====================
     function triggerDistraction(msg, duration) {
+        state.questionFocus = null;
         state.teacherState = 'distracted';
         state.teacherTimer = duration;
         updateTeacherVisuals();
         setBanner(msg, 'active-event');
     }
 
+    function triggerQuestionFocus(seat) {
+        const stageRect = stageWrapper.getBoundingClientRect();
+        const arenaRect = classroomArena.getBoundingClientRect();
+        const deskRect = seat.el.getBoundingClientRect();
+
+        const centerX = deskRect.left + deskRect.width / 2;
+        const centerY = deskRect.top + deskRect.height / 2;
+
+        const xPercent = ((centerX - stageRect.left) / stageRect.width) * 100;
+        const yPercent = ((centerY - arenaRect.top) / arenaRect.height) * 100;
+
+        state.questionFocus = {
+            row: seat.row,
+            col: seat.col,
+            xPercent,
+            yPercent
+        };
+        state.teacherState = 'question';
+        state.teacherTimer = 3.5;
+        updateTeacherVisuals();
+        setBanner(`🙋 ${seat.row + 1}排${seat.col + 1}座舉手發問！老師看過去並留意其左右兩側 (3.5秒)`, '');
+    }
+
+    function isStudentCaughtByQuestion(stu) {
+        if (!state.questionFocus) return false;
+        const arenaRect = classroomArena.getBoundingClientRect();
+        const stuRect = stu.el.getBoundingClientRect();
+
+        const relY = (stuRect.top + stuRect.height / 2 - arenaRect.top) / arenaRect.height;
+        const approxRow = Math.min(state.rows - 1, Math.max(0, Math.floor(relY * state.rows)));
+
+        const relX = (stuRect.left + stuRect.width / 2 - arenaRect.left) / arenaRect.width;
+        const approxCol = Math.min(state.cols - 1, Math.max(0, Math.floor(relX * state.cols)));
+
+        const sameRow = approxRow === state.questionFocus.row;
+        const withinLeftRight = Math.abs(approxCol - state.questionFocus.col) <= 1;
+        return sameRow && withinLeftRight;
+    }
+
     function updateTeacherVisuals() {
         teacherAvatar.classList.remove('watching');
         visionCone.classList.remove('active');
+        visionCone.classList.remove('question-mode');
+        visionCone.style.removeProperty('--ty');
         teacherSignal.className = 'teacher-signal';
         teacherSignal.textContent = '';
 
@@ -1274,6 +1170,13 @@
             teacherAvatar.textContent = '🤔';
             teacherSignal.textContent = '💬 分心中';
             teacherSignal.classList.add('signal-distract');
+        } else if (state.teacherState === 'question' && state.questionFocus) {
+            teacherAvatar.textContent = '🧐';
+            teacherSignal.textContent = '👂 聽發問＋看左右';
+            teacherSignal.classList.add('signal-question');
+            visionCone.style.setProperty('--tx', `${state.questionFocus.xPercent}%`);
+            visionCone.style.setProperty('--ty', `${state.questionFocus.yPercent}%`);
+            visionCone.classList.add('active', 'question-mode');
         }
     }
 
@@ -1284,7 +1187,6 @@
         const dt = Math.min(0.05, (timestamp - state.lastTimestamp) / 1000);
         state.lastTimestamp = timestamp;
 
-        // 1. 倒數計時
         state.timeLeft -= dt;
         if (state.timeLeft <= 0) {
             state.timeLeft = 0;
@@ -1293,101 +1195,91 @@
             return;
         }
 
-        // 2. 老師講課踱步、停頓與轉頭狀態機
         updateTeacher(dt);
 
-        // 3. 隨機特殊事件倒數
         if (state.teacherState === 'teaching') {
             state.eventCooldown -= dt;
             if (state.eventCooldown <= 0) {
-                state.eventCooldown = 11 + Math.random() * 6;
+                state.eventCooldown = 11 + Math.random() * 5;
                 const ev = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
                 triggerDistraction(ev.text, ev.duration);
             }
         }
 
-        // 4. 更新所有移動中的學生
         updateStudents(dt);
-
         updateHUD();
         requestAnimationFrame(gameLoop);
     }
 
     function updateTeacher(dt) {
-        // 講台緩慢走動＋自然停頓（像老師邊走邊寫黑板、停下來講解）
+        // 講課時慢速移動並偶爾停頓寫黑板／看課本
         if (state.teacherState === 'teaching') {
             if (state.teacherPauseTimer > 0) {
                 state.teacherPauseTimer -= dt;
-                if (state.teacherPauseTimer <= 0) {
-                    state.teacherActionText = '🚶 講台踱步';
-                    updateTeacherVisuals();
-                }
             } else {
-                // 緩慢步伐 (約 7~10% / 秒)
-                const walkSpeed = 7.5 + state.level * 0.8;
+                const walkSpeed = 6.5 + state.level * 0.7;
                 state.teacherX += state.teacherDir * walkSpeed * dt;
-
-                if (state.teacherX > 80) {
-                    state.teacherX = 80;
+                if (state.teacherX > 78) {
+                    state.teacherX = 78;
                     state.teacherDir = -1;
-                } else if (state.teacherX < 20) {
-                    state.teacherX = 20;
+                    state.teacherPauseTimer = 0.9 + Math.random() * 0.8;
+                    state.teacherActionText = '📖 看講義中';
+                    updateTeacherVisuals();
+                } else if (state.teacherX < 22) {
+                    state.teacherX = 22;
                     state.teacherDir = 1;
-                }
-                teacherEntity.style.left = `${state.teacherX}%`;
-
-                // 走一段路後自然停頓下來寫黑板或講重點
-                if (Math.random() < 0.014) {
-                    state.teacherPauseTimer = 1.1 + Math.random() * 1.1;
-                    state.teacherActionText = TEACH_ACTIONS[Math.floor(Math.random() * TEACH_ACTIONS.length)];
+                    state.teacherPauseTimer = 0.9 + Math.random() * 0.8;
+                    state.teacherActionText = '✍️ 寫黑板中';
+                    updateTeacherVisuals();
+                } else if (Math.random() < 0.008) {
+                    state.teacherPauseTimer = 0.8 + Math.random() * 0.9;
+                    state.teacherActionText = Math.random() < 0.5 ? '✍️ 停筆講解' : '📌 指重點中';
                     updateTeacherVisuals();
                 }
             }
+            teacherEntity.style.left = `${state.teacherX}%`;
         }
 
         state.teacherTimer -= dt;
         if (state.teacherTimer > 0) return;
 
-        // 狀態轉換（隨關卡提升速度變快，Lv.1 預警空檔約 1.75 秒，精準對應三排距離）
-        const speedFactor = Math.max(0.6, 1 - (state.level - 1) * 0.05);
+        const speedFactor = Math.max(0.68, 1 - (state.level - 1) * 0.05);
 
         if (state.teacherState === 'teaching') {
-            // Level 2 以上有 22% 機率出現「假動作虛晃一招」
             const isFake = state.level >= 2 && Math.random() < 0.22;
             state.teacherState = isFake ? 'fakeout' : 'warning';
-            state.teacherTimer = Math.max(0.95, 1.75 * speedFactor);
+            // 預警空檔給玩家足夠反應時間派人
+            state.teacherTimer = Math.max(1.35, 1.75 * speedFactor);
             updateTeacherVisuals();
         } else if (state.teacherState === 'fakeout') {
             state.teacherState = 'teaching';
-            state.teacherTimer = Math.max(1.8, 2.8 * speedFactor);
+            state.teacherTimer = Math.max(2.0, 2.8 * speedFactor);
             state.teacherPauseTimer = 1.0;
-            state.teacherActionText = '✍️ 繼續板書';
+            state.teacherActionText = '✍️ 寫黑板中';
             updateTeacherVisuals();
             setBanner('虛驚一場！老師只是轉頭拿板擦～', '');
         } else if (state.teacherState === 'warning') {
             state.teacherState = 'watching';
-            state.teacherTimer = Math.max(1.15, 1.65 * speedFactor);
+            state.teacherTimer = Math.max(1.2, 1.75 * speedFactor);
             updateTeacherVisuals();
-            setBanner('⚠️ 老師正在看台下！教室內走動會被抓包！', 'warning-event');
-        } else if (state.teacherState === 'watching' || state.teacherState === 'distracted') {
+            setBanner('⚠️ 老師正在看台下！在教室內走動會被抓包！', 'warning-event');
+        } else if (state.teacherState === 'watching' || state.teacherState === 'distracted' || state.teacherState === 'question') {
+            state.questionFocus = null;
             state.teacherState = 'teaching';
-            state.teacherTimer = Math.max(2.0, 3.1 * speedFactor);
+            state.teacherTimer = Math.max(2.1, 3.1 * speedFactor);
             state.teacherPauseTimer = 1.1;
-            state.teacherActionText = TEACH_ACTIONS[Math.floor(Math.random() * TEACH_ACTIONS.length)];
+            state.teacherActionText = '✍️ 寫黑板中';
             updateTeacherVisuals();
-            setBanner('老師轉回去寫黑板了，快趁現在從後門溜進去！', '');
+            setBanner('老師繼續講課了，快安排門外學生溜進教室！', '');
         }
     }
 
     function updateStudents(dt) {
+        const arenaHeight = classroomArena.clientHeight || 274;
+
         for (let i = state.movingStudents.length - 1; i >= 0; i--) {
             const stu = state.movingStudents[i];
 
-            // 判斷是否還在教室外面（走廊安全區）
-            const isOutsideClassroom = stu.y > stu.doorThresholdY - 2;
-            stu.el.classList.toggle('outside', isOutsideClassroom);
-
-            // 罰站暈眩中
             if (stu.stunTimer > 0) {
                 stu.stunTimer -= dt;
                 if (stu.stunTimer <= 0) {
@@ -1396,24 +1288,31 @@
                 continue;
             }
 
-            // 只有在「已踏入教室內」且「老師正在盯梢」時才會被抓包
+            // 判斷是否仍在教室外走廊／後門邊緣（教室外不會扣分）
+            const isOutsideClassroom = stu.y > arenaHeight - 8;
+
             if (!isOutsideClassroom && state.teacherState === 'watching') {
                 handleStudentCaught(stu);
                 continue;
             }
 
-            // 膽小型：老師出現預警時若在教室內會原地猶豫頓住
-            if (!isOutsideClassroom && stu.timid && (state.teacherState === 'warning' || state.teacherState === 'fakeout')) {
+            if (!isOutsideClassroom && state.teacherState === 'question' && isStudentCaughtByQuestion(stu)) {
+                handleStudentCaught(stu, '發問區左右被看到！');
+                continue;
+            }
+
+            // 膽小型：老師出現預警時會原地猶豫頓住
+            if (stu.timid && (state.teacherState === 'warning' || state.teacherState === 'fakeout')) {
                 stu.el.classList.add('paused');
                 continue;
             } else {
                 stu.el.classList.remove('paused');
             }
 
-            // 低頭族：在走道上偶爾滑手機停頓 0.45 秒
-            if (!isOutsideClassroom && stu.phone && !stu.hasCheckedPhone && stu.wpIndex >= 1 && Math.random() < 0.015) {
+            // 低頭族：走到一半偶爾滑手機停頓 0.55 秒
+            if (!isOutsideClassroom && stu.phone && !stu.hasCheckedPhone && Math.random() < 0.015) {
                 stu.hasCheckedPhone = true;
-                stu.phoneTimer = 0.45;
+                stu.phoneTimer = 0.55;
                 spawnFloatText(stu.el, '📱回個訊息...', 'var(--warning)');
             }
             if (stu.phoneTimer > 0) {
@@ -1422,21 +1321,30 @@
                 continue;
             }
 
-            // 依序沿著路徑點移動（走廊 -> 進後門 -> 走道 -> 入座）
-            const wp = stu.waypoints[stu.wpIndex];
-            const dx = wp.x - stu.x;
-            const dy = wp.y - stu.y;
-            const dist = Math.hypot(dx, dy);
+            // 路線：先從後門進走道 -> 往目標排高度前進 -> 橫移坐進座位
+            let dx = stu.targetX - stu.x;
+            let dy = stu.targetY - stu.y;
 
-            if (dist <= 4) {
-                stu.x = wp.x;
-                stu.y = wp.y;
-                stu.wpIndex++;
-                if (stu.wpIndex >= stu.waypoints.length) {
+            if (stu.y > stu.entryY) {
+                dx = stu.aisleX - stu.x;
+                dy = stu.entryY - stu.y;
+            } else if (Math.abs(dy) > 5 && Math.abs(stu.x - stu.aisleX) > 12) {
+                dx = stu.aisleX - stu.x;
+            }
+
+            const dist = Math.hypot(dx, dy);
+            if (dist <= stu.speed * dt + 2) {
+                if (Math.hypot(stu.targetX - stu.x, stu.targetY - stu.y) <= stu.speed * dt + 3) {
+                    stu.x = stu.targetX;
+                    stu.y = stu.targetY;
+                    stu.el.style.left = `${stu.x}px`;
+                    stu.el.style.top = `${stu.y}px`;
                     seatStudentSuccess(stu, i);
                     continue;
                 }
-            } else {
+            }
+
+            if (dist > 0) {
                 const step = Math.min(dist, stu.speed * dt);
                 stu.x += (dx / dist) * step;
                 stu.y += (dy / dist) * step;
@@ -1447,17 +1355,16 @@
         }
     }
 
-    function handleStudentCaught(stu) {
+    function handleStudentCaught(stu, reasonText = '抓包！') {
         state.caughtCount++;
         state.combo = 1;
         const penalty = 80;
         state.levelScore = Math.max(0, state.levelScore - penalty);
         state.totalScore = Math.max(0, state.totalScore - penalty);
 
-        // 原地罰站 1.35 秒
         stu.stunTimer = 1.35;
         stu.el.classList.add('caught');
-        spawnFloatText(stu.el, `抓包！-${penalty}`, 'var(--danger)');
+        spawnFloatText(stu.el, `${reasonText}-${penalty}`, 'var(--danger)');
     }
 
     function seatStudentSuccess(stu, index) {
@@ -1469,30 +1376,23 @@
         seat.studentEmoji = stu.emoji;
         renderDesk(seat);
 
-        // 基礎連擊得分
-        let gained = Math.round(seat.score * (1 + (state.combo - 1) * 0.25));
-
-        // 較慢學生成功入座前排（第一排 row=0 或第二排 row=1）的額外膽識加分
-        let challengeBonus = 0;
+        // 較慢的學生安排在前排（row 0 第一排、row 1 第二排）獲得額外加分
+        let frontBoldBonus = 0;
         if (stu.type === 'slow') {
-            if (seat.row === 0) challengeBonus = 180;
-            else if (seat.row === 1) challengeBonus = 90;
-        } else if ((stu.type === 'normal' || stu.type === 'timid') && seat.row === 0) {
-            challengeBonus = 80;
+            if (seat.row === 0) frontBoldBonus = 180;
+            else if (seat.row === 1) frontBoldBonus = 90;
+        } else if (stu.speed <= 250 && seat.row === 0) {
+            frontBoldBonus = 80;
         }
 
-        gained += challengeBonus;
+        const gained = Math.round(seat.score * (1 + (state.combo - 1) * 0.25)) + frontBoldBonus;
         state.levelScore += gained;
         state.totalScore += gained;
         state.combo++;
 
-        if (challengeBonus > 0) {
-            spawnFloatText(seat.el, `+${gained} (前排加分+${challengeBonus}!)`, 'var(--warning)');
-        } else {
-            spawnFloatText(seat.el, `+${gained}`, 'var(--success)');
-        }
+        const bonusLabel = frontBoldBonus > 0 ? `+${gained} (前排加分+${frontBoldBonus})` : `+${gained}`;
+        spawnFloatText(seat.el, bonusLabel, frontBoldBonus > 0 ? 'var(--warning)' : 'var(--success)');
 
-        // 檢查是否全部坐滿
         if (state.seats.every(s => s.occupied)) {
             const timeBonus = Math.round(state.timeLeft * 25);
             state.levelScore += timeBonus;
@@ -1524,7 +1424,7 @@
 
         let badge = '遲到慣犯';
         if (cleared && state.caughtCount === 0 && state.timeLeft >= 8) {
-            badge = '🥷 後門神速影武者';
+            badge = '🥷 零抓包神速影武者';
         } else if (cleared && state.caughtCount === 0) {
             badge = '🤫 零抓包潛行大師';
         } else if (cleared && state.timeLeft < 3) {
@@ -1546,7 +1446,7 @@
         const nextBtn = document.getElementById('nextBtn');
 
         if (cleared) {
-            descEl.textContent = `全班順利從後門潛入就坐！獲得剩餘時間獎勵 +${timeBonus} 分，下一關老師會更警覺喔！`;
+            descEl.textContent = `全班順利就坐！獲得剩餘時間獎勵 +${timeBonus} 分，下一關節奏會更緊湊喔！`;
             nextBtn.textContent = `挑戰第 ${state.level + 1} 關 ➡️`;
             nextBtn.onclick = () => {
                 document.getElementById('resultModal').classList.add('hidden');
